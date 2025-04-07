@@ -1,0 +1,286 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}User Management - Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2">User Management</h1>
+            <p class="text-muted">Manage and monitor user accounts</p>
+        </div>
+        <div>
+            <a href="{% url 'users:admin_user_create' %}" class="btn btn-primary">
+                <i class="fas fa-user-plus me-2"></i>Add User
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">User Type</label>
+                    <select name="type" class="form-select">
+                        <option value="">All Types</option>
+                        <option value="ADMIN" {% if current_type == 'ADMIN' %}selected{% endif %}>Admin</option>
+                        <option value="BUSINESS" {% if current_type == 'BUSINESS' %}selected{% endif %}>Business</option>
+                        <option value="NONPROFIT" {% if current_type == 'NONPROFIT' %}selected{% endif %}>Non-Profit</option>
+                        <option value="VOLUNTEER" {% if current_type == 'VOLUNTEER' %}selected{% endif %}>Volunteer</option>
+                        <option value="CONSUMER" {% if current_type == 'CONSUMER' %}selected{% endif %}>Consumer</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All Status</option>
+                        <option value="active" {% if current_status == 'active' %}selected{% endif %}>Active</option>
+                        <option value="inactive" {% if current_status == 'inactive' %}selected{% endif %}>Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-2"></i>Apply Filters
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Users List -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Activity</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="avatar bg-light rounded-circle">
+                                            <i class="fas fa-user text-primary"></i>
+                                        </div>
+                                    </div>
+                                    <div class="ms-3">
+                                        <h6 class="mb-1">{{ user.get_full_name }}</h6>
+                                        <p class="small text-muted mb-0">{{ user.email }}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-primary">{{ user.get_user_type_display }}</span>
+                                {% if user.user_type == 'BUSINESS' and user.businessprofile %}
+                                    <div class="small mt-2">
+                                        <p class="mb-1"><strong>Company:</strong> {{ user.businessprofile.company_name }}</p>
+                                    </div>
+                                {% elif user.user_type == 'NONPROFIT' and user.nonprofitprofile %}
+                                    <div class="small mt-2">
+                                        <p class="mb-1"><strong>Organization:</strong> {{ user.nonprofitprofile.organization_name }}</p>
+                                        <p class="mb-0"><strong>Type:</strong> {{ user.nonprofitprofile.get_organization_type_display }}</p>
+                                    </div>
+                                {% elif user.user_type == 'VOLUNTEER' and user.volunteer_profile %}
+                                    <div class="small mt-2">
+                                        <p class="mb-1"><strong>Area:</strong> {{ user.volunteer_profile.service_area }}</p>
+                                        <p class="mb-0"><strong>Transport:</strong> {{ user.volunteer_profile.get_transportation_method_display }}</p>
+                                    </div>
+                                {% elif user.user_type == 'ADMIN' and user.admin_profile %}
+                                    <div class="small mt-2">
+                                        <p class="mb-1"><strong>Department:</strong> {{ user.admin_profile.get_department_display }}</p>
+                                        <p class="mb-0"><strong>Last IP:</strong> {{ user.admin_profile.last_login_ip|default:"Not available" }}</p>
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if user.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inactive</span>
+                                {% endif %} 
+                            </td>
+                            <td>
+                                <div class="small">
+                                    <p class="mb-1"><strong>Joined:</strong> {{ user.date_joined|date:"M d, Y" }}</p>
+                                    <p class="mb-0"><strong>Last Login:</strong> {{ user.last_login|date:"M d, Y H:i"|default:"Never" }}</p>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Actions
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'users:admin_user_edit' user.id %}">
+                                                <i class="fas fa-edit me-2"></i>Edit
+                                            </a>
+                                        </li>
+                                        {% if user != request.user %}
+                                            {% if user.is_active %}
+                                            <li>
+                                                <a class="dropdown-item text-danger toggle-status" href="#" 
+                                                   data-user-id="{{ user.id }}" 
+                                                   data-current-status="active">
+                                                    <i class="fas fa-ban me-2"></i>Deactivate
+                                                </a>
+                                            </li>
+                                            {% else %}
+                                            <li>
+                                                <a class="dropdown-item text-success toggle-status" href="#" 
+                                                   data-user-id="{{ user.id }}" 
+                                                   data-current-status="inactive">
+                                                    <i class="fas fa-check me-2"></i>Activate
+                                                </a>
+                                            </li>
+                                            {% endif %}
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4">
+                                <div class="text-muted">
+                                    <i class="fas fa-users fa-2x mb-3"></i>
+                                    <h5>No Users Found</h5>
+                                    <p>No users match your filter criteria.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle status toggle buttons
+    document.querySelectorAll('.toggle-status').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const userId = this.dataset.userId;
+            const currentStatus = this.dataset.currentStatus;
+            const newStatus = currentStatus === 'active' ? 'deactivate' : 'activate';
+            
+            sweetify.fire({
+                title: `Confirm ${newStatus}?`,
+                text: `Are you sure you want to ${newStatus} this user?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: currentStatus === 'active' ? '#dc3545' : '#198754',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: currentStatus === 'active' ? 'Yes, deactivate' : 'Yes, activate',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading state
+                    sweetify.fire({
+                        title: 'Processing...',
+                        text: `${newStatus}ing user account`,
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            sweetify.showLoading();
+                        }
+                    });
+                    
+                    fetch(`/manage/users/${userId}/toggle-status/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCsrfToken()
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            sweetify.fire({
+                                icon: 'success',
+                                title: 'Success!',
+                                text: `User has been ${currentStatus === 'active' ? 'deactivated' : 'activated'} successfully.`,
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 3000,
+                                timerProgressBar: true
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        } else {
+                            sweetify.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: data.error || 'An error occurred while updating user status',
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 3000,
+                                timerProgressBar: true
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        sweetify.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'An error occurred while updating user status',
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 3000,
+                            timerProgressBar: true
+                        });
+                    });
+                }
+            });
+        });
+    });
+    
+    // Add loading state to filter form
+    document.querySelector('form[method="get"]').addEventListener('submit', function() {
+        const button = this.querySelector('button[type="submit"]');
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Applying Filters...';
+    });
+    
+    // Helper function to get CSRF token
+    function getCsrfToken() {
+        const name = 'csrftoken';
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
+</script>
+{% endblock %}
+
+{% endblock %}

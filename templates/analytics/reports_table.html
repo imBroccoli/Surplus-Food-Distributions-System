@@ -1,0 +1,96 @@
+{% load humanize %}
+
+<tbody>
+    {% for report in recent_reports %}
+    <tr>
+        <td>{{ report.title }}</td>
+        <td>
+            <span class="badge {% if report.report_type == 'IMPACT' %}bg-primary
+                {% elif report.report_type == 'TRANSACTION' %}bg-success
+                {% elif report.report_type == 'USER_ACTIVITY' %}bg-info
+                {% elif report.report_type == 'COMPLIANCE' %}bg-warning
+                {% else %}bg-danger{% endif %}">
+                {{ report.get_report_type_display }}
+            </span>
+        </td>
+        <td>{{ report.date_generated|naturaltime }}</td>
+        <td>{{ report.generated_by.get_full_name|default:report.generated_by.email }}</td>
+        <td>
+            <div class="btn-group">
+                <a href="{% url 'analytics:report_detail' report.id %}" 
+                   class="btn btn-sm btn-outline-primary me-1"
+                   data-bs-toggle="tooltip"
+                   title="View Report">
+                    <i class="fas fa-eye"></i>
+                </a>
+                <button type="button"
+                        class="btn btn-sm btn-outline-success me-1 regenerate-btn"
+                        data-bs-toggle="tooltip"
+                        title="Regenerate Report"
+                        data-report-id="{{ report.id }}">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button type="button"
+                        class="btn btn-sm btn-outline-info me-1 schedule-btn"
+                        data-bs-toggle="tooltip"
+                        title="Schedule Report"
+                        data-report-id="{{ report.id }}">
+                    <i class="fas fa-clock"></i>
+                </button>
+            </div>
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="5" class="text-center py-4">
+            <div class="text-muted">
+                <i class="fas fa-info-circle me-2"></i>No reports generated yet
+            </div>
+        </td>
+    </tr>
+    {% endfor %}
+</tbody>
+
+{% if recent_reports.paginator.num_pages > 1 %}
+<nav aria-label="Report navigation">
+    <ul class="pagination justify-content-center mb-0" id="reportPagination">
+        {% if recent_reports.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="#" data-page="1" aria-label="First">
+                <i class="fas fa-angle-double-left"></i>
+            </a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="#" data-page="{{ recent_reports.previous_page_number }}" aria-label="Previous">
+                <i class="fas fa-angle-left"></i>
+            </a>
+        </li>
+        {% endif %}
+
+        {% for num in recent_reports.paginator.page_range %}
+            {% if recent_reports.number == num %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > recent_reports.number|add:'-3' and num < recent_reports.number|add:'3' %}
+            <li class="page-item">
+                <a class="page-link" href="#" data-page="{{ num }}">{{ num }}</a>
+            </li>
+            {% endif %}
+        {% endfor %}
+
+        {% if recent_reports.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="#" data-page="{{ recent_reports.next_page_number }}" aria-label="Next">
+                <i class="fas fa-angle-right"></i>
+            </a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="#" data-page="{{ recent_reports.paginator.num_pages }}" aria-label="Last">
+                <i class="fas fa-angle-double-right"></i>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}

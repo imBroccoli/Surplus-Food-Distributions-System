@@ -1,0 +1,338 @@
+{% load humanize %}
+
+<!-- Transaction Volume Charts -->
+<div class="row g-4 mb-4">
+    <!-- Transaction Trend Chart -->
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent">
+                <h5 class="card-title mb-0">Transaction Volume Trends</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="transactionVolumeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Success Rate Chart -->
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent">
+                <h5 class="card-title mb-0">Success Rate Analysis</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="successRateChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Response Time & Value Charts -->
+<div class="row g-4 mb-4">
+    <!-- Response Time Chart -->
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent">
+                <h5 class="card-title mb-0">Response Time Analysis</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="responseTimeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Transaction Value Chart -->
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent">
+                <h5 class="card-title mb-0">Transaction Value Trends</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="transactionValueChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Transaction Type Distribution -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent">
+        <h5 class="card-title mb-0">Transaction Type Distribution</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-4">
+            {% for type in report.data.transaction_types %}
+            <div class="col-sm-6 col-lg-3">
+                <div class="p-3 rounded bg-light">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <div class="rounded-circle p-2 bg-{{ type.color }} bg-opacity-10">
+                                    <i class="fas fa-{{ type.icon }} fa-fw text-{{ type.color }}"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-0">{{ type.name }}</h6>
+                            </div>
+                        </div>
+                        <span class="badge bg-{{ type.color }}">{{ type.count|intcomma }}</span>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-{{ type.color }}" style="width: {{ type.percentage }}%"></div>
+                    </div>
+                    <small class="text-muted d-block mt-2">{{ type.description }}</small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Recent Transactions -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="card-title mb-0">Recent Transactions</h5>
+            </div>
+            <div class="col-auto">
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-download me-2"></i>Export
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'analytics:export_report' report.id 'pdf' %}">
+                            <i class="fas fa-file-pdf me-2"></i>Export as PDF
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'analytics:export_report' report.id 'csv' %}">
+                            <i class="fas fa-file-csv me-2"></i>Export as CSV
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'analytics:export_report' report.id 'excel' %}">
+                            <i class="fas fa-file-excel me-2"></i>Export as Excel
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Value</th>
+                        <th>Response Time</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tx in report.data.recent_transactions %}
+                    <tr>
+                        <td>
+                            <small class="text-muted">#{{ tx.id }}</small>
+                        </td>
+                        <td>{{ tx.date|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-{{ tx.type_icon }} fa-fw me-2 text-{{ tx.type_color }}"></i>
+                                {{ tx.type }}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ tx.status_color }}">{{ tx.status }}</span>
+                        </td>
+                        <td>${{ tx.value|floatformat:2|intcomma }}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1" style="width: 100px;">
+                                    <div class="progress" style="height: 4px;">
+                                        <div class="progress-bar bg-{{ tx.response_color }}" 
+                                             style="width: {{ tx.response_percentage }}%">
+                                        </div>
+                                    </div>
+                                </div>
+                                <small class="text-muted ms-2">{{ tx.response_time }}h</small>
+                            </div>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-link btn-sm p-0" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#txDetails{{ tx.id }}">
+                                View
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Transaction Detail Modals -->
+{% for tx in report.data.recent_transactions %}
+<div class="modal fade" id="txDetails{{ tx.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Transaction Details #{{ tx.id }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted">Type</label>
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-{{ tx.type_icon }} fa-fw me-2 text-{{ tx.type_color }}"></i>
+                        {{ tx.type }}
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Status</label>
+                    <div>
+                        <span class="badge bg-{{ tx.status_color }}">{{ tx.status }}</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Value</label>
+                    <div>${{ tx.value|floatformat:2|intcomma }}</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Date</label>
+                    <div>{{ tx.date|date:"Y-m-d H:i" }}</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Description</label>
+                    <div>{{ tx.description }}</div>
+                </div>
+                {% if tx.notes %}
+                <div>
+                    <label class="form-label text-muted">Notes</label>
+                    <div>{{ tx.notes }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Chart.js Initialization -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Transaction Volume Chart
+    const volumeCtx = document.getElementById('transactionVolumeChart').getContext('2d');
+    new Chart(volumeCtx, {
+        type: 'line',
+        data: {
+            labels: {{ report.data.charts.volume.labels|safe }},
+            datasets: [{
+                label: 'Transactions',
+                data: {{ report.data.charts.volume.data|safe }},
+                borderColor: '#0d6efd',
+                tension: 0.4,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+
+    // Success Rate Chart
+    const successCtx = document.getElementById('successRateChart').getContext('2d');
+    new Chart(successCtx, {
+        type: 'line',
+        data: {
+            labels: {{ report.data.charts.success_rate.labels|safe }},
+            datasets: [{
+                label: 'Success Rate (%)',
+                data: {{ report.data.charts.success_rate.data|safe }},
+                borderColor: '#198754',
+                tension: 0.4,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+
+    // Response Time Chart
+    const responseCtx = document.getElementById('responseTimeChart').getContext('2d');
+    new Chart(responseCtx, {
+        type: 'line',
+        data: {
+            labels: {{ report.data.charts.response_time.labels|safe }},
+            datasets: [{
+                label: 'Response Time (hrs)',
+                data: {{ report.data.charts.response_time.data|safe }},
+                borderColor: '#ffc107',
+                tension: 0.4,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+
+    // Transaction Value Chart
+    const valueCtx = document.getElementById('transactionValueChart').getContext('2d');
+    new Chart(valueCtx, {
+        type: 'line',
+        data: {
+            labels: {{ report.data.charts.value.labels|safe }},
+            datasets: [{
+                label: 'Value ($)',
+                data: {{ report.data.charts.value.data|safe }},
+                borderColor: '#198754',
+                tension: 0.4,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+});
+</script>

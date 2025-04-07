@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}Notification Settings - Surplus Food Distribution System{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="card-title mb-0">Notification Settings</h5>
+                </div>
+                <div class="card-body">
+                    {% if user_profile %}
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="mb-4">
+                                <div class="form-check form-switch">
+                                    <input type="checkbox" class="form-check-input" id="push_notifications" name="push_notifications" {% if user_profile.push_notifications %}checked{% endif %}>
+                                    <label class="form-check-label" for="push_notifications">In-App Notifications</label>
+                                </div>
+                                <small class="text-muted">Receive notifications in your browser when using the platform</small>
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="notification_frequency" class="form-label">Notification Frequency</label>
+                                <select class="form-select" id="notification_frequency" name="notification_frequency">
+                                    <option value="immediate" {% if user_profile.notification_frequency == 'immediate' %}selected{% endif %}>Immediate</option>
+                                    <option value="daily" {% if user_profile.notification_frequency == 'daily' %}selected{% endif %}>Daily Digest</option>
+                                    <option value="weekly" {% if user_profile.notification_frequency == 'weekly' %}selected{% endif %}>Weekly Digest</option>
+                                </select>
+                                <small class="text-muted">How often you want to receive notification summaries</small>
+                            </div>
+
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-exclamation-circle text-warning fa-3x mb-3"></i>
+                            <h6>Profile Not Found</h6>
+                            <p class="text-muted">Unable to load notification preferences for your account type.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

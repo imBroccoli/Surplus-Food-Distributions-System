@@ -1,0 +1,272 @@
+{% load humanize %}
+
+<!-- Impact Trend Charts -->
+<div class="row g-4 mb-4">
+    <!-- Food Impact Chart -->
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent">
+                <h5 class="card-title mb-0">Food Waste Reduction Trends</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="foodImpactChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Environmental Impact Chart -->
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent">
+                <h5 class="card-title mb-0">Environmental Impact</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="environmentalImpactChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Social & Economic Charts -->
+<div class="row g-4 mb-4">
+    <!-- Social Impact Chart -->
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent">
+                <h5 class="card-title mb-0">Social Impact</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="socialImpactChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Economic Impact Chart -->
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent">
+                <h5 class="card-title mb-0">Economic Value</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="economicImpactChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Metrics Table -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="card-title mb-0">Impact Metrics by Category</h5>
+            </div>
+            <div class="col-auto">
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-download me-2"></i>Export
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'analytics:export_report' report.id 'pdf' %}">
+                            <i class="fas fa-file-pdf me-2"></i>Export as PDF
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'analytics:export_report' report.id 'csv' %}">
+                            <i class="fas fa-file-csv me-2"></i>Export as CSV
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'analytics:export_report' report.id 'excel' %}">
+                            <i class="fas fa-file-excel me-2"></i>Export as Excel
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Category</th>
+                        <th>Current Period</th>
+                        <th>Previous Period</th>
+                        <th>Change</th>
+                        <th>Target</th>
+                        <th>Progress</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for metric in report.data.impact_metrics %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-{{ metric.icon }} fa-fw me-2 text-{{ metric.color }}"></i>
+                                {{ metric.name }}
+                            </div>
+                        </td>
+                        <td>{{ metric.current_value }}</td>
+                        <td>{{ metric.previous_value }}</td>
+                        <td>
+                            <span class="badge {% if metric.change >= 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ metric.change }}%
+                            </span>
+                        </td>
+                        <td>{{ metric.target }}</td>
+                        <td style="width: 15%;">
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-{{ metric.color }}" 
+                                     style="width: {{ metric.progress }}%"
+                                     title="{{ metric.progress }}% of target">
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Beneficiary Distribution -->
+{% if report.data.beneficiary_distribution %}
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent">
+        <h5 class="card-title mb-0">Beneficiary Distribution</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-4">
+            {% for group in report.data.beneficiary_distribution %}
+            <div class="col-sm-6 col-lg-4">
+                <div class="p-3 rounded bg-light">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>{{ group.name }}</span>
+                        <span class="badge bg-primary">{{ group.count|intcomma }}</span>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar" style="width: {{ group.percentage }}%"></div>
+                    </div>
+                    <small class="text-muted d-block mt-2">
+                        {{ group.description }}
+                    </small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Chart.js Initialization -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Food Impact Chart
+    const foodCtx = document.getElementById('foodImpactChart').getContext('2d');
+    new Chart(foodCtx, {
+        type: 'line',
+        data: {
+            labels: {{ report.data.charts.food.labels|safe }},
+            datasets: [{
+                label: 'Food Saved (kg)',
+                data: {{ report.data.charts.food.data|safe }},
+                borderColor: '#198754',
+                tension: 0.4,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+
+    // Environmental Impact Chart
+    const envCtx = document.getElementById('environmentalImpactChart').getContext('2d');
+    new Chart(envCtx, {
+        type: 'line',
+        data: {
+            labels: {{ report.data.charts.environmental.labels|safe }},
+            datasets: [{
+                label: 'CO2 Emissions Saved (kg)',
+                data: {{ report.data.charts.environmental.co2|safe }},
+                borderColor: '#0d6efd',
+                tension: 0.4,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+
+    // Social Impact Chart
+    const socialCtx = document.getElementById('socialImpactChart').getContext('2d');
+    new Chart(socialCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ report.data.charts.social.labels|safe }},
+            datasets: [{
+                label: 'Meals Provided',
+                data: {{ report.data.charts.social.meals|safe }},
+                backgroundColor: '#ffc107',
+                barPercentage: 0.6
+            }, {
+                label: 'Beneficiaries Served',
+                data: {{ report.data.charts.social.beneficiaries|safe }},
+                backgroundColor: '#0dcaf0',
+                barPercentage: 0.6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            }
+        }
+    });
+
+    // Economic Impact Chart
+    const economicCtx = document.getElementById('economicImpactChart').getContext('2d');
+    new Chart(economicCtx, {
+        type: 'line',
+        data: {
+            labels: {{ report.data.charts.economic.labels|safe }},
+            datasets: [{
+                label: 'Economic Value ($)',
+                data: {{ report.data.charts.economic.value|safe }},
+                borderColor: '#198754',
+                tension: 0.4,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+});
+</script>

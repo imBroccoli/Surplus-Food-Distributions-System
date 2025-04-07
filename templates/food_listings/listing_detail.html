@@ -1,0 +1,201 @@
+{% extends 'food_listings/base_listings.html' %}
+
+{% block listing_title %}{{ listing.title }}{% endblock %}
+{% block listing_subtitle %}Food Listing Details{% endblock %}
+
+{% block listing_header_actions %}
+<div>
+    {% if request.GET.return_to == 'browse' %}
+        <a href="{% url 'transactions:browse_listings' %}" class="btn btn-light me-2">
+            <i class="fas fa-arrow-left me-2"></i>Back to Browse
+        </a>
+    {% elif request.GET.return_to == 'nonprofit' %}
+        <a href="{% url 'listings:nonprofit_listings' %}" class="btn btn-light me-2">
+            <i class="fas fa-arrow-left me-2"></i>Back to Nonprofit Listings
+        </a>
+    {% else %}
+        <a href="{% url 'listings:list' %}" class="btn btn-light me-2">
+            <i class="fas fa-arrow-left me-2"></i>Back to My Listings
+        </a>
+    {% endif %}
+    {% if listing.supplier == user %}
+        <a href="{% url 'listings:update' listing.pk %}" class="btn btn-primary">
+            <i class="fas fa-edit me-2"></i>Edit Listing
+        </a>
+    {% endif %}
+    {% if user.is_staff %}
+        <a href="{% url 'listings:compliance_check' listing.pk %}" class="btn btn-info">
+            <i class="fas fa-clipboard-check me-2"></i>Compliance Check
+        </a>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block listing_content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow-sm mb-4">
+            {% if listing.images.exists %}
+                <img src="{{ listing.images.first.image.url }}" class="card-img-top" alt="{{ listing.title }}">
+            {% endif %}
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h2 class="card-title mb-0">{{ listing.title }}</h2>
+                        <p class="text-muted mb-0">
+                            <small>Posted {{ listing.created_at|timesince }} ago</small>
+                        </p>
+                    </div>
+                    <div>
+                        <span class="badge {% if listing.status == 'ACTIVE' %}bg-success{% elif listing.status == 'DRAFT' %}bg-warning{% else %}bg-secondary{% endif %}">
+                            {{ listing.get_status_display }}
+                        </span>
+                        {% if listing.compliance_check %}
+                            {% if listing.compliance_check.is_compliant %}
+                                <span class="badge bg-success ms-2">
+                                    <i class="fas fa-check me-1"></i>Compliant
+                                </span>
+                            {% else %}
+                                <span class="badge bg-danger ms-2">
+                                    <i class="fas fa-times me-1"></i>Non-Compliant
+                                </span>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if user.is_staff and listing.compliance_check %}
+                <div class="alert {% if listing.compliance_check.is_compliant %}alert-success{% else %}alert-danger{% endif %} mb-4">
+                    <h6 class="alert-heading">Compliance Check Details</h6>
+                    <p class="mb-1"><strong>Checked by:</strong> {{ listing.compliance_check.checked_by.get_full_name }}</p>
+                    <p class="mb-1"><strong>Date:</strong> {{ listing.compliance_check.checked_at|date:"F j, Y, g:i a" }}</p>
+                    {% if listing.compliance_check.notes %}
+                        <p class="mb-0"><strong>Notes:</strong> {{ listing.compliance_check.notes }}</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <div class="mb-4">
+                    <h5>Description</h5>
+                    <p>{{ listing.description }}</p>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h5>Quantity & Type</h5>
+                        <p class="mb-1">{{ listing.quantity }} {{ listing.unit }}</p>
+                        <span class="badge {% if listing.listing_type == 'COMMERCIAL' %}bg-primary{% else %}bg-success{% endif %}">
+                            {{ listing.get_listing_type_display }}
+                        </span>
+                        {% if listing.price %}
+                            <span class="badge bg-info ms-2">${{ listing.price }}</span>
+                        {% else %}
+                            <span class="badge bg-success ms-2">Free</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Expiry Date</h5>
+                        <p>{{ listing.expiry_date|date:"F j, Y, g:i a" }}</p>
+                    </div>
+                </div>
+
+                {% if listing.storage_requirements or listing.handling_instructions %}
+                    <div class="row mb-4">
+                        {% if listing.storage_requirements %}
+                            <div class="col-md-6">
+                                <h5>Storage Requirements</h5>
+                                <p>{{ listing.storage_requirements }}</p>
+                            </div>
+                        {% endif %}
+                        {% if listing.handling_instructions %}
+                            <div class="col-md-6">
+                                <h5>Handling Instructions</h5>
+                                <p>{{ listing.handling_instructions }}</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                <div class="mb-4">
+                    <h5>Location</h5>
+                    <p class="mb-1">
+                        <i class="fas fa-map-marker-alt me-2"></i>
+                        {{ listing.address }}
+                    </p>
+                    <p class="mb-0">
+                        {{ listing.city }}{% if listing.postal_code %}, {{ listing.postal_code }}{% endif %}
+                    </p>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent">
+                <div class="d-grid gap-2">
+                    {% if listing.compliance_check and not listing.compliance_check.is_compliant %}
+                        <button class="btn btn-secondary" disabled>
+                            <i class="fas fa-ban me-2"></i>Non-Compliant Listing
+                        </button>
+                    {% else %}
+                        {% if user != listing.supplier %}
+                            <a href="{% url 'transactions:make_request' listing.pk %}" class="btn btn-primary">
+                                <i class="fas fa-hand-holding-heart me-2"></i>Request Food
+                            </a>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Supplier Information</h5>
+                <div class="d-flex align-items-center mb-3">
+                    <i class="fas fa-building fa-2x me-3 text-primary"></i>
+                    <div>
+                        <h6 class="mb-0">{{ listing.supplier.businessprofile.company_name }}</h6>
+                        <small class="text-muted">{{ listing.supplier.businessprofile.get_company_size_display }}</small>
+                    </div>
+                </div>
+                <p class="mb-0">
+                    <i class="fas fa-envelope me-2"></i>
+                    {{ listing.supplier.email }}
+                </p>
+                {% if listing.supplier.phone_number %}
+                    <p class="mb-0">
+                        <i class="fas fa-phone me-2"></i>
+                        {{ listing.supplier.phone_number }}
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if listing.supplier == user %}
+            <div class="d-grid gap-2">
+                {% if listing.status == 'DRAFT' %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="activate">
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="fas fa-check-circle me-2"></i>Activate Listing
+                        </button>
+                    </form>
+                {% elif listing.status == 'ACTIVE' %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="deactivate">
+                        <button type="submit" class="btn btn-warning w-100">
+                            <i class="fas fa-pause-circle me-2"></i>Deactivate Listing
+                        </button>
+                    </form>
+                {% endif %}
+                <a href="{% url 'listings:update' listing.pk %}" class="btn btn-primary">
+                    <i class="fas fa-edit me-2"></i>Edit Listing
+                </a>
+                <a href="{% url 'listings:delete' listing.pk %}" class="btn btn-danger">
+                    <i class="fas fa-trash me-2"></i>Delete Listing
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Compliance Checks{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Food Listing Compliance Checks</h1>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="btn-group mb-3" role="group" aria-label="Filter compliance status">
+                <a href="{% url 'listings:compliance_list' %}" class="btn btn-outline-primary {% if filter_status == 'all' %}active{% endif %}">All</a>
+                <a href="{% url 'listings:compliance_list' %}?status=unchecked" class="btn btn-outline-primary {% if filter_status == 'unchecked' %}active{% endif %}">Unchecked</a>
+                <a href="{% url 'listings:compliance_list' %}?status=compliant" class="btn btn-outline-primary {% if filter_status == 'compliant' %}active{% endif %}">Compliant</a>
+                <a href="{% url 'listings:compliance_list' %}?status=non_compliant" class="btn btn-outline-primary {% if filter_status == 'non_compliant' %}active{% endif %}">Non-Compliant</a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Supplier</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Last Check</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for listing in page_obj %}
+                        <tr>
+                            <td>{{ listing.title }}</td>
+                            <td>{{ listing.supplier.email }}</td>
+                            <td>{{ listing.get_listing_type_display }}</td>
+                            <td>
+                                {% if listing.compliance_check %}
+                                    {% if listing.compliance_check.is_compliant %}
+                                        <span class="badge bg-success">Compliant</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Non-Compliant</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-warning">Unchecked</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if listing.compliance_check %}
+                                    {{ listing.compliance_check.checked_at|date:"Y-m-d H:i" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'listings:compliance_check' listing.pk %}" class="btn btn-sm btn-primary">
+                                    {% if listing.compliance_check %}
+                                        Review Check
+                                    {% else %}
+                                        Perform Check
+                                    {% endif %}
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                <p class="text-muted mb-0">No listings found matching the selected filter.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <nav aria-label="Compliance list pagination">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if filter_status != 'all' %}&status={{ filter_status }}{% endif %}">Previous</a>
+                </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                    <a class="page-link" href="?page={{ num }}{% if filter_status != 'all' %}&status={{ filter_status }}{% endif %}">{{ num }}</a>
+                </li>
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if filter_status != 'all' %}&status={{ filter_status }}{% endif %}">Next</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

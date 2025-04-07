@@ -1,0 +1,91 @@
+{% extends 'transactions/base_transactions.html' %}
+{% load crispy_forms_tags %}
+
+{% block transaction_title %}Request Food{% endblock %}
+{% block transaction_subtitle %}Request food from "{{ listing.title }}"{% endblock %}
+
+{% block transaction_header_actions %}
+<div>
+    <a href="{% url 'transactions:requests' %}" class="btn btn-light">
+        <i class="fas fa-arrow-left me-2"></i>Back to My Requests
+    </a>
+</div>
+{% endblock %}
+
+{% block transaction_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="mb-4">
+                    <h4>Listing Details</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Title:</strong> {{ listing.title }}</p>
+                            <p><strong>Quantity Available:</strong> {{ listing.quantity }} {{ listing.unit }}</p>
+                            <p><strong>Type:</strong> {{ listing.get_listing_type_display }}</p>
+                            {% if listing.price %}
+                                <p><strong>Price:</strong> ${{ listing.price }}</p>
+                            {% else %}
+                                <p><strong>Price:</strong> Free</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Expiry Date:</strong> {{ listing.expiry_date|date:"F j, Y" }}</p>
+                            {% if listing.storage_requirements %}
+                                <p><strong>Storage Requirements:</strong> {{ listing.storage_requirements }}</p>
+                            {% endif %}
+                            {% if listing.handling_instructions %}
+                                <p><strong>Handling Instructions:</strong> {{ listing.handling_instructions }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <h4 class="mb-3">Request Details</h4>
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-2"></i>Submit Request
+                        </button>
+                        <a href="{% url 'transactions:requests' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Requests
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const pickupDateInput = document.querySelector('input[name="pickup_date"]');
+    if (pickupDateInput) {
+        // Set minimum date to today
+        const today = new Date();
+        today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+        pickupDateInput.min = today.toISOString().slice(0, 16);
+        
+        // Add validation on change
+        pickupDateInput.addEventListener('change', function() {
+            const selectedDate = new Date(this.value);
+            const now = new Date();
+            
+            if (selectedDate < now) {
+                this.setCustomValidity('Pickup date cannot be in the past');
+            } else {
+                this.setCustomValidity('');
+            }
+            this.reportValidity();
+        });
+    }
+});
+</script>
+{% endblock %}

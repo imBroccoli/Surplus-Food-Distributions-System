@@ -1,0 +1,429 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Impact Dashboard - Surplus Food Distribution{% endblock %}
+
+{% block extra_css %}
+<style>
+    .activity-dashboard {
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        min-height: calc(100vh - 56px);
+        padding: 1.5rem;
+    }
+    .stats-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.04);
+        transition: all 0.3s ease;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        height: 100%;
+        overflow: hidden;
+    }
+    .stats-card:hover {
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.06);
+        transform: translateY(-2px);
+    }
+    .metric-icon {
+        width: 52px;
+        height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        font-size: 1.4rem;
+        margin-right: 1rem;
+    }
+    .stats-card:hover .metric-icon {
+        transform: scale(1.1);
+    }
+    .progress {
+        border-radius: 10px;
+        overflow: hidden;
+        height: 10px;
+        background-color: rgba(var(--bs-primary-rgb), 0.1);
+        position: relative;
+    }
+    .progress-bar {
+        transition: width 1s ease-in-out;
+        border-radius: 10px;
+        position: relative;
+    }
+    .nav-button {
+        border-radius: 10px;
+        transition: all 0.3s ease;
+        padding: 0.625rem 1.25rem;
+        font-weight: 500;
+        letter-spacing: 0.3px;
+    }
+    .nav-button:hover {
+        transform: translateY(-2px);
+    }
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 600;
+        line-height: 1.2;
+        color: #2c3e50;
+        margin: 0.5rem 0;
+        display: flex;
+        align-items: baseline;
+        gap: 0.5rem;
+    }
+    .metric-value small {
+        font-size: 1rem;
+        color: #6c757d;
+        font-weight: 500;
+    }
+    .metric-label {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #6c757d;
+        margin-bottom: 0.25rem;
+        letter-spacing: 0.3px;
+    }
+    .impact-card {
+        background: rgba(var(--bs-light-rgb), 0.5);
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        padding: 1.5rem;
+        height: 100%;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    .impact-card:hover {
+        background: rgba(var(--bs-light-rgb), 0.8);
+        transform: translateY(-2px);
+    }
+    .card-header {
+        background: transparent;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        padding: 1.5rem;
+    }
+    .card-body {
+        padding: 1.5rem;
+    }
+    .stat-container {
+        padding: 1.5rem;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    .impact-metric {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+    }
+    .impact-metric:hover {
+        transform: translateX(5px);
+    }
+    .impact-metric:last-child {
+        border-bottom: none;
+    }
+    .impact-metric-label {
+        font-weight: 500;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+    }
+    .impact-metric-value {
+        font-weight: 600;
+        padding: 0.3rem 0.8rem;
+        border-radius: 8px;
+        background-color: rgba(var(--bs-light-rgb), 0.5);
+    }
+    .section-header {
+        margin-bottom: 2rem;
+    }
+    .section-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    .section-description {
+        color: #6c757d;
+        font-size: 1rem;
+    }
+    .card-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+    .card-title i {
+        color: inherit;
+    }
+    .time-period-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .metric-trend {
+        font-size: 0.875rem;
+        padding: 0.375rem 1rem;
+        border-radius: 20px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        margin-top: 0.5rem;
+        white-space: nowrap;
+    }
+    .metric-trend i {
+        font-size: 0.75rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="activity-dashboard">
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="section-header d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="section-title text-success mb-2">Impact Metrics</h1>
+                <p class="section-description mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Track environmental and social impact metrics
+                </p>
+            </div>
+            <div class="d-flex gap-3">
+                <a href="{% url 'analytics:system_analytics' %}" class="btn btn-outline-success nav-button">
+                    <i class="fas fa-chart-line me-2"></i>System Metrics
+                </a>
+                <a href="{% url 'analytics:user_activity' %}" class="btn btn-outline-success nav-button">
+                    <i class="fas fa-users me-2"></i>User Activity
+                </a>
+            </div>
+        </div>
+
+        <!-- Today's Impact -->
+        <div class="row g-4 mb-4">
+            <!-- Food Redistributed -->
+            <div class="col-sm-6 col-lg-3">
+                <div class="stats-card">
+                    <div class="stat-container">
+                        <div class="d-flex align-items-center">
+                            <div class="metric-icon bg-success bg-opacity-10">
+                                <i class="fas fa-apple-alt text-success"></i>
+                            </div>
+                            <div>
+                                <div class="metric-label">Today's Food Impact</div>
+                                <div class="metric-value">{{ metrics.today.food_total|default:0|floatformat:1|intcomma }} <small>kg</small></div>
+                                <div class="metric-trend" style="color: #28a745; background-color: rgba(40, 167, 69, 0.1);">
+                                    <i class="fas fa-seedling"></i>
+                                    Food saved today
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CO2 Emissions -->
+            <div class="col-sm-6 col-lg-3">
+                <div class="stats-card">
+                    <div class="stat-container">
+                        <div class="d-flex align-items-center">
+                            <div class="metric-icon bg-primary bg-opacity-10">
+                                <i class="fas fa-leaf text-primary"></i>
+                            </div>
+                            <div>
+                                <div class="metric-label">CO2 Emissions Saved</div>
+                                <div class="metric-value">{{ metrics.today.co2_total|default:0|floatformat:1|intcomma }} <small>kg</small></div>
+                                <div class="metric-trend" style="color: #007bff; background-color: rgba(0, 123, 255, 0.1);">
+                                    <i class="fas fa-cloud"></i>
+                                    Environmental impact
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Meals Provided -->
+            <div class="col-sm-6 col-lg-3">
+                <div class="stats-card">
+                    <div class="stat-container">
+                        <div class="d-flex align-items-center">
+                            <div class="metric-icon bg-warning bg-opacity-10">
+                                <i class="fas fa-utensils text-warning"></i>
+                            </div>
+                            <div>
+                                <div class="metric-label">Meals Provided</div>
+                                <div class="metric-value">{{ metrics.today.meals_total|default:0|intcomma }}</div>
+                                <div class="metric-trend" style="color: #ffc107; background-color: rgba(255, 193, 7, 0.1);">
+                                    <i class="fas fa-hand-holding-heart"></i>
+                                    Social impact
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Value Saved -->
+            <div class="col-sm-6 col-lg-3">
+                <div class="stats-card">
+                    <div class="stat-container">
+                        <div class="d-flex align-items-center">
+                            <div class="metric-icon bg-info bg-opacity-10">
+                                <i class="fas fa-dollar-sign text-info"></i>
+                            </div>
+                            <div>
+                                <div class="metric-label">Value Saved</div>
+                                <div class="metric-value">${{ metrics.today.value_total|default:0|floatformat:2|intcomma }}</div>
+                                <div class="metric-trend" style="color: #17a2b8; background-color: rgba(23, 162, 184, 0.1);">
+                                    <i class="fas fa-chart-line"></i>
+                                    Economic impact
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Historical Impact -->
+        <div class="row g-4">
+            <!-- Last 7 Days -->
+            <div class="col-md-6 col-xl-4">
+                <div class="stats-card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0 text-primary">
+                            <i class="fas fa-calendar-week me-2"></i>Last 7 Days
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="impact-metric">
+                            <span class="impact-metric-label">
+                                <i class="fas fa-apple-alt me-2 text-success"></i>Food Redistributed
+                            </span>
+                            <span class="impact-metric-value text-success">
+                                {{ metrics.last_7_days.food_total|default:0|floatformat:1|intcomma }} kg
+                            </span>
+                        </div>
+                        <div class="impact-metric">
+                            <span class="impact-metric-label">
+                                <i class="fas fa-leaf me-2 text-primary"></i>CO2 Emissions Saved
+                            </span>
+                            <span class="impact-metric-value text-primary">
+                                {{ metrics.last_7_days.co2_total|default:0|floatformat:1|intcomma }} kg
+                            </span>
+                        </div>
+                        <div class="impact-metric">
+                            <span class="impact-metric-label">
+                                <i class="fas fa-utensils me-2 text-warning"></i>Meals Provided
+                            </span>
+                            <span class="impact-metric-value text-warning">
+                                {{ metrics.last_7_days.meals_total|default:0|intcomma }}
+                            </span>
+                        </div>
+                        <div class="impact-metric">
+                            <span class="impact-metric-label">
+                                <i class="fas fa-dollar-sign me-2 text-info"></i>Value Saved
+                            </span>
+                            <span class="impact-metric-value text-info">
+                                ${{ metrics.last_7_days.value_total|default:0|floatformat:2|intcomma }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Last 30 Days -->
+            <div class="col-md-6 col-xl-4">
+                <div class="stats-card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0 text-success">
+                            <i class="fas fa-calendar-alt me-2"></i>Last 30 Days
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="impact-metric">
+                            <span class="impact-metric-label">
+                                <i class="fas fa-apple-alt me-2 text-success"></i>Food Redistributed
+                            </span>
+                            <span class="impact-metric-value text-success">
+                                {{ metrics.last_30_days.food_total|default:0|floatformat:1|intcomma }} kg
+                            </span>
+                        </div>
+                        <div class="impact-metric">
+                            <span class="impact-metric-label">
+                                <i class="fas fa-leaf me-2 text-primary"></i>CO2 Emissions Saved
+                            </span>
+                            <span class="impact-metric-value text-primary">
+                                {{ metrics.last_30_days.co2_total|default:0|floatformat:1|intcomma }} kg
+                            </span>
+                        </div>
+                        <div class="impact-metric">
+                            <span class="impact-metric-label">
+                                <i class="fas fa-utensils me-2 text-warning"></i>Meals Provided
+                            </span>
+                            <span class="impact-metric-value text-warning">
+                                {{ metrics.last_30_days.meals_total|default:0|intcomma }}
+                            </span>
+                        </div>
+                        <div class="impact-metric">
+                            <span class="impact-metric-label">
+                                <i class="fas fa-dollar-sign me-2 text-info"></i>Value Saved
+                            </span>
+                            <span class="impact-metric-value text-info">
+                                ${{ metrics.last_30_days.value_total|default:0|floatformat:2|intcomma }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Time Impact -->
+            <div class="col-md-12 col-xl-4">
+                <div class="stats-card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0 text-warning">
+                            <i class="fas fa-trophy me-2"></i>All Time Impact
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="impact-metric">
+                            <span class="impact-metric-label">
+                                <i class="fas fa-apple-alt me-2 text-success"></i>Food Redistributed
+                            </span>
+                            <span class="impact-metric-value text-success">
+                                {{ metrics.all_time.food_total|default:0|floatformat:1|intcomma }} kg
+                            </span>
+                        </div>
+                        <div class="impact-metric">
+                            <span class="impact-metric-label">
+                                <i class="fas fa-leaf me-2 text-primary"></i>CO2 Emissions Saved
+                            </span>
+                            <span class="impact-metric-value text-primary">
+                                {{ metrics.all_time.co2_total|default:0|floatformat:1|intcomma }} kg
+                            </span>
+                        </div>
+                        <div class="impact-metric">
+                            <span class="impact-metric-label">
+                                <i class="fas fa-utensils me-2 text-warning"></i>Meals Provided
+                            </span>
+                            <span class="impact-metric-value text-warning">
+                                {{ metrics.all_time.meals_total|default:0|intcomma }}
+                            </span>
+                        </div>
+                        <div class="impact-metric">
+                            <span class="impact-metric-label">
+                                <i class="fas fa-dollar-sign me-2 text-info"></i>Value Saved
+                            </span>
+                            <span class="impact-metric-value text-info">
+                                ${{ metrics.all_time.value_total|default:0|floatformat:2|intcomma }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

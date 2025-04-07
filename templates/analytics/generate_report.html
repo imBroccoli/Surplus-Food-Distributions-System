@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Generate Report - Surplus Food Distribution{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2">Generate Report</h1>
+            <p class="text-muted">Create a new analytical report</p>
+        </div>
+        <div>
+            <a href="{% url 'analytics:reports_dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Report Form -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            {% if form.errors %}
+                <div class="alert alert-danger">
+                    <h5 class="alert-heading">Form Errors</h5>
+                    {% for field, errors in form.errors.items %}
+                        {% for error in errors %}
+                            <p class="mb-0">{{ error }}</p>
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                
+                <!-- Basic Information -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="mb-3">
+                            <label for="report_type" class="form-label">Report Type</label>
+                            <select class="form-select" id="report_type" name="report_type" required>
+                                <option value="">Select report type</option>
+                                {% for value, label in form.fields.report_type.choices %}
+                                    <option value="{{ value }}" {% if form.report_type.value == value %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            {% if form.report_type.errors %}
+                                <div class="invalid-feedback">{{ form.report_type.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Report Title</label>
+                            <input type="text" class="form-control" id="title" name="title" 
+                                   value="{{ form.title.value|default:'' }}" required>
+                            {% if form.title.errors %}
+                                <div class="invalid-feedback">{{ form.title.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3">{{ form.description.value|default:'' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Date Range -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="date_range_start" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="date_range_start" 
+                                   name="date_range_start" value="{{ form.date_range_start.value|date:'Y-m-d'|default:'' }}" required>
+                            {% if form.date_range_start.errors %}
+                                <div class="invalid-feedback">{{ form.date_range_start.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="date_range_end" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="date_range_end" 
+                                   name="date_range_end" value="{{ form.date_range_end.value|date:'Y-m-d'|default:'' }}" required>
+                            {% if form.date_range_end.errors %}
+                                <div class="invalid-feedback">{{ form.date_range_end.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="d-flex justify-content-end">
+                    <button type="button" class="btn btn-outline-secondary me-2" onclick="window.history.back()">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-file-alt me-2"></i>Generate Report
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const startDateInput = document.getElementById('date_range_start');
+    const endDateInput = document.getElementById('date_range_end');
+    const form = document.querySelector('form');
+
+    // More robust date parsing function that removes time components
+    function parseDate(dateStr) {
+        if (!dateStr) return null;
+        // Split the date string and create a new Date with components
+        const [year, month, day] = dateStr.split('-').map(Number);
+        // Use UTC date to avoid timezone issues
+        return new Date(Date.UTC(year, month - 1, day));
+    }
+
+    // Format date as YYYY-MM-DD
+    function formatDate(date) {
+        return date.toISOString().split('T')[0];
+    }
+
+    // Compare dates by components (year, month, day) to eliminate timezone issues
+    function compareDates(date1, date2) {
+        // Returns: -1 if date1 < date2, 0 if equal, 1 if date1 > date2
+        if (date1.getUTCFullYear() !== date2.getUTCFullYear()) {
+            return date1.getUTCFullYear() < date2.getUTCFullYear() ? -1 : 1;
+        }
+        if (date1.getUTCMonth() !== date2.getUTCMonth()) {
+            return date1.getUTCMonth() < date2.getUTCMonth() ? -1 : 1;
+        }
+        if (date1.getUTCDate() !== date2.getUTCDate()) {
+            return date1.getUTCDate() < date2.getUTCDate() ? -1 : 1;
+        }
+        return 0; // Dates are equal at day precision
+    }
+
+    // Get today's date using the system date
+    const now = new Date();
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const todayFormatted = formatDate(today);
+    
+    console.log("Today's date for validation:", todayFormatted);
+    
+    // Set max date to today for both inputs
+    startDateInput.max = todayFormatted;
+    endDateInput.max = todayFormatted;
+
+    // Update end date validation when start date changes
+    startDateInput.addEventListener('change', function() {
+        endDateInput.min = this.value;
+        
+        if (endDateInput.value && endDateInput.value < this.value) {
+            endDateInput.setCustomValidity('End date cannot be before start date');
+        } else {
+            endDateInput.setCustomValidity('');
+        }
+        
+        form.classList.add('was-validated');
+    });
+
+    // Clear validation message when end date changes
+    endDateInput.addEventListener('change', function() {
+        if (startDateInput.value && this.value < startDateInput.value) {
+            this.setCustomValidity('End date cannot be before start date');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+
+    // Validate dates on form submission
+    form.addEventListener('submit', function(event) {
+        // Reset previous error states
+        startDateInput.setCustomValidity('');
+        endDateInput.setCustomValidity('');
+        
+        if (!startDateInput.value || !endDateInput.value) {
+            return; // Let the native required validation handle empty fields
+        }
+        
+        // Parse dates for proper comparison (using UTC)
+        const startDate = parseDate(startDateInput.value);
+        const endDate = parseDate(endDateInput.value);
+        
+        console.log("Form submission - validating dates:");
+        console.log("Start date:", startDateInput.value, "->", startDate.toISOString());
+        console.log("End date:", endDateInput.value, "->", endDate.toISOString());
+        console.log("Today:", today.toISOString());
+        
+        // Compare by components instead of timestamps
+        const startCompareToday = compareDates(startDate, today);
+        const endCompareToday = compareDates(endDate, today);
+        
+        console.log("Start date compared to today:", startCompareToday);
+        console.log("End date compared to today:", endCompareToday);
+        
+        // Check for future dates - allow today but not future dates
+        if (startCompareToday > 0) {
+            event.preventDefault();
+            console.log("Start date in future!");
+            startDateInput.setCustomValidity('Start date cannot be in the future');
+        }
+        
+        if (endCompareToday > 0) {
+            event.preventDefault();
+            console.log("End date in future!");
+            endDateInput.setCustomValidity('End date cannot be in the future');
+        }
+        
+        // Check if end date is before start date
+        if (compareDates(endDate, startDate) < 0) {
+            event.preventDefault();
+            endDateInput.setCustomValidity('End date cannot be before start date');
+        }
+
+        // Show validation messages
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+    
+    // Add a hidden input to signal to the server that client-side validation is active
+    const validationInput = document.createElement('input');
+    validationInput.type = 'hidden';
+    validationInput.name = 'client_validation';
+    validationInput.value = 'true';
+    form.appendChild(validationInput);
+});
+</script>
+{% endblock %}
+{% endblock %}

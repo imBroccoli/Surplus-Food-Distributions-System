@@ -1,0 +1,121 @@
+{% load fixed_sweetify %}
+{# This template provides a consistent implementation of sweetify across all templates #}
+{% sweetify %}
+
+<script>
+// Create the sweetify object if it doesn't exist
+if (typeof sweetify === 'undefined') {
+    window.sweetify = {
+        fire: function() {
+            return Swal.fire.apply(Swal, arguments);
+        },
+        success: function(message, options) {
+            const opts = options || {};
+            return Swal.fire({
+                title: 'Success!',
+                text: message,
+                icon: 'success',
+                timer: opts.timer || 3000,
+                timerProgressBar: true,
+                showConfirmButton: !opts.timer,
+                toast: opts.toast || false,
+                position: opts.position || 'center',
+                ...opts
+            });
+        },
+        error: function(message, options) {
+            const opts = options || {};
+            return Swal.fire({
+                title: 'Error!',
+                text: message,
+                icon: 'error',
+                timer: opts.timer || 3000,
+                timerProgressBar: true,
+                showConfirmButton: !opts.timer || opts.persistent,
+                toast: opts.toast || false,
+                position: opts.position || 'center',
+                ...opts
+            });
+        },
+        warning: function(message, options) {
+            const opts = options || {};
+            return Swal.fire({
+                title: 'Warning!',
+                text: message,
+                icon: 'warning',
+                timer: opts.timer || 3000,
+                timerProgressBar: true,
+                showConfirmButton: !opts.timer || opts.persistent,
+                toast: opts.toast || false,
+                position: opts.position || 'center',
+                ...opts
+            });
+        },
+        info: function(message, options) {
+            const opts = options || {};
+            return Swal.fire({
+                title: 'Info',
+                text: message,
+                icon: 'info',
+                timer: opts.timer || 3000,
+                timerProgressBar: true,
+                showConfirmButton: !opts.timer || opts.persistent,
+                toast: opts.toast || false,
+                position: opts.position || 'center',
+                ...opts
+            });
+        },
+        showLoading: function() {
+            return Swal.showLoading();
+        },
+        showValidationMessage: function(message) {
+            return Swal.showValidationMessage(message);
+        },
+        close: function() {
+            return Swal.close();
+        }
+    };
+}
+
+// Ensure SweetAlert2 is loaded and initialize it
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof Swal === 'undefined') {
+        console.warn('SweetAlert2 is not loaded. Loading it dynamically...');
+        // Dynamically load SweetAlert2 if it's not present
+        const cssLink = document.createElement('link');
+        cssLink.rel = 'stylesheet';
+        cssLink.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+        document.head.appendChild(cssLink);
+        
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js';
+        script.onload = function() {
+            console.log('SweetAlert2 loaded successfully');
+            // Process any queued messages
+            processSweetifyMessages();
+        };
+        document.body.appendChild(script);
+    } else {
+        // SweetAlert2 is already loaded, process any messages
+        processSweetifyMessages();
+    }
+    
+    // Function to process any sweetify messages in the page
+    function processSweetifyMessages() {
+        // Check for any sweetify data attributes
+        document.querySelectorAll('[data-sweetify-message]').forEach(function(element) {
+            const message = element.getAttribute('data-sweetify-message');
+            const type = element.getAttribute('data-sweetify-type') || 'success';
+            const options = JSON.parse(element.getAttribute('data-sweetify-options') || '{}');
+            
+            if (message && sweetify && sweetify[type]) {
+                // Call the appropriate sweetify method
+                sweetify[type](message, options);
+                
+                // Remove the element to prevent showing again on page refresh
+                element.remove();
+            }
+        });
+    }
+});
+</script>

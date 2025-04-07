@@ -1,0 +1,119 @@
+/* Nonprofit Verification Page Styles */
+.table-hover tbody tr:hover {
+    background-color: rgba(var(--bs-primary-rgb), 0.05);
+    transition: background-color 0.2s ease;
+}
+
+.badge {
+    font-weight: 500;
+    padding: 0.5em 0.8em;
+}
+
+.btn-group .dropdown-menu {
+    margin-top: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.btn-outline-primary:hover {
+    transform: translateY(-1px);
+    transition: transform 0.2s ease;
+}
+
+.table td {
+    padding: 1rem 0.75rem;
+}
+
+.bg-light {
+    background-color: var(--bs-gray-100) !important;
+}
+
+.modal-content {
+    border-radius: 0.5rem;
+}
+
+.form-select:focus,
+.form-control:focus {
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.15);
+}
+
+.pagination .page-link {
+    padding: 0.5rem 0.75rem;
+    color: var(--bs-primary);
+}
+
+.pagination .page-link:hover {
+    background-color: rgba(var(--bs-primary-rgb), 0.1);
+}
+
+.pagination .active .page-link {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}
+
+/* Status Badge Styles */
+.badge.bg-success {
+    background-color: #28a745 !important;
+}
+
+.badge.bg-danger {
+    background-color: #dc3545 !important;
+}
+
+.badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #000;
+}
+
+.badge.bg-info {
+    background-color: #0dcaf0 !important;
+}
+
+/* Organization Icon Container */
+.bg-light.rounded-circle {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Form Control Styles */
+.form-control-plaintext {
+    font-size: 1rem;
+    color: var(--bs-dark);
+}
+
+/* Modal Animation */
+.modal.fade .modal-dialog {
+    transform: scale(0.95);
+    transition: transform 0.2s ease-out;
+}
+
+.modal.show .modal-dialog {
+    transform: scale(1);
+}
+
+/* Fix for dropdown menu in responsive table */
+.table-responsive {
+    overflow-x: visible !important;  /* Allow dropdowns to overflow */
+}
+
+@media (max-width: 768px) {
+    .table-responsive {
+        overflow-x: auto !important;  /* Restore horizontal scroll on mobile */
+    }
+}
+
+/* Ensure dropdown menus appear above other elements */
+.dropdown-menu {
+    z-index: 1021;  /* Higher than the default Bootstrap modal z-index */
+    min-width: 200px;  /* Ensure enough width for menu items */
+    margin-top: 0.5rem;
+    max-height: none !important;  /* Remove any max-height limitation */
+    overflow: visible !important;  /* Remove any overflow limitation */
+}
+
+.dropdown-item {
+    white-space: nowrap;  /* Prevent text wrapping in dropdown items */
+    padding: 0.5rem 1rem;  /* Add more padding for better touch targets */
+}

@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    .transaction-header {
+        background: linear-gradient(135deg, #0d6efd 0%, #0099ff 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+    }
+    .type-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+    }
+    .listing-card {
+        border: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+    .listing-card:hover {
+        transform: translateY(-5px);
+    }
+    .table th {
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>{% block transaction_title %}{% endblock %}</h2>
+            <p class="text-muted mb-0">{% block transaction_subtitle %}{% endblock %}</p>
+        </div>
+        <div class="col-auto">
+            {% block transaction_header_actions %}{% endblock %}
+        </div>
+    </div>
+
+    {% block transaction_content %}{% endblock %}
+</div>
+
+<!-- Sweetify Messages Handler -->
+{% load sweetify %}
+{% sweetify %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Clear messages after displaying them using fetch API
+    {% if messages %}
+        fetch('{% url "notifications:clear_messages" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        });
+    {% endif %}
+});
+</script>
+{% endblock %}

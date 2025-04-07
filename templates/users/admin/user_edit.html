@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Edit User - Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2">Edit User</h1>
+            <p class="text-muted">Update user information and settings</p>
+        </div>
+        <div>
+            <a href="{% url 'users:admin_users_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Users
+            </a>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+            <form method="post" class="needs-validation user-edit-form" novalidate enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <!-- Basic User Information -->
+                <div class="section mb-4">
+                    <h4 class="h5 mb-4">Basic Information</h4>
+                    {{ user_form|crispy }}
+                </div>
+
+                {% if profile_form %}
+                <!-- Profile Information -->
+                <div class="section mb-4">
+                    <h4 class="h5 mb-4">
+                        {% if edited_user.user_type == 'BUSINESS' %}
+                            Business Information
+                        {% elif edited_user.user_type == 'NONPROFIT' %}
+                            Nonprofit Information
+                        {% elif edited_user.user_type == 'VOLUNTEER' %}
+                            Volunteer Information
+                        {% elif edited_user.user_type == 'ADMIN' %}
+                            Administrative Information
+                        {% endif %}
+                    </h4>
+                    {{ profile_form|crispy }}
+                </div>
+                {% endif %}
+
+                <div class="btn-toolbar justify-content-end">
+                    <button type="button" class="btn btn-outline-secondary me-2" onclick="window.history.back();">
+                        <i class="fas fa-times me-1"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Messages are now handled by the sweetify tag in base.html template
+    
+    const form = document.querySelector('.user-edit-form');
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Find first invalid field
+            const firstInvalid = form.querySelector(':invalid');
+            if (firstInvalid) {
+                firstInvalid.focus();
+                
+                sweetify.fire({
+                    icon: 'error',
+                    title: 'Validation Error',
+                    text: 'Please check the form for errors and try again.',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+            }
+        } else {
+            // Show loading state
+            sweetify.fire({
+                title: 'Saving Changes',
+                text: 'Please wait while we update the user information...',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    sweetify.showLoading();
+                }
+            });
+        }
+        form.classList.add('was-validated');
+    });
+});
+</script>
+{% endblock %}

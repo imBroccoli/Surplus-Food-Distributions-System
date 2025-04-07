@@ -1,0 +1,82 @@
+{% extends 'transactions/base_transactions.html' %}
+
+{% block transaction_title %}Available Deliveries{% endblock %}
+{% block transaction_subtitle %}Find delivery opportunities in your area{% endblock %}
+
+{% block transaction_header_actions %}
+<div>
+    <a href="{% url 'transactions:my_deliveries' %}" class="btn btn-light">
+        <i class="fas fa-list me-2"></i>My Deliveries
+    </a>
+</div>
+{% endblock %}
+
+{% block transaction_content %}
+<div class="row">
+    {% for delivery in page_obj %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">{{ delivery.transaction.request.listing.title }}</h5>
+                    <div class="mb-3">
+                        <span class="badge bg-primary">{{ delivery.estimated_weight|floatformat:1 }} kg</span>
+                        {% if delivery.distance %}
+                            <span class="badge bg-info">{{ delivery.distance }} km</span>
+                        {% endif %}
+                    </div>
+                    <p class="card-text">
+                        <strong>Pickup:</strong><br>
+                        {{ delivery.pickup_window_start|date:"M d, Y H:i" }} -
+                        {{ delivery.pickup_window_end|date:"H:i" }}
+                    </p>
+                    <p class="card-text">
+                        <strong>Delivery:</strong><br>
+                        {{ delivery.delivery_window_start|date:"M d, Y H:i" }} -
+                        {{ delivery.delivery_window_end|date:"H:i" }}
+                        {% if delivery.transaction.request.preferred_time %}
+                            <br><small class="text-muted">Preferred Time: {{ delivery.preferred_time_display }}</small>
+                        {% endif %}
+                    </p>
+                    {% if delivery.pickup_notes %}
+                        <p class="card-text">
+                            <small class="text-muted">
+                                <strong>Pickup Notes:</strong><br>
+                                {{ delivery.pickup_notes }}
+                            </small>
+                        </p>
+                    {% endif %}
+                    {% if delivery.delivery_notes %}
+                        <p class="card-text">
+                            <small class="text-muted">
+                                <strong>Delivery Notes:</strong><br>
+                                {{ delivery.delivery_notes }}
+                            </small>
+                        </p>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div class="d-grid">
+                        <a href="{% url 'transactions:accept_delivery' delivery.id %}" class="btn btn-primary">
+                            <i class="fas fa-check me-2"></i>Accept Delivery
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                    <h3>No Available Deliveries</h3>
+                    <p class="text-muted">There are currently no pending deliveries in your area.</p>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+{% if page_obj.has_other_pages %}
+    {% include "transactions/includes/pagination.html" %}
+{% endif %}
+{% endblock %}

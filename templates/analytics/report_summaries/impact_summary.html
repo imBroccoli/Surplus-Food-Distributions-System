@@ -1,0 +1,72 @@
+{% load humanize %}
+
+<div class="row g-4">
+    <!-- Food Impact -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="p-3 rounded bg-light">
+            <div class="d-flex align-items-center mb-2">
+                <div class="flex-shrink-0">
+                    <div class="rounded-circle p-2 bg-success bg-opacity-10">
+                        <i class="fas fa-apple-alt fa-fw text-success"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h6 class="mb-0">Food Saved</h6>
+                </div>
+            </div>
+            <h3 class="mb-0">{{ report.data.food_impact.total_kg|default:0|floatformat:1|intcomma }} kg</h3>
+            <small class="text-muted">{{ report.data.food_impact.percent_change|default:0 }}% from previous period</small>
+        </div>
+    </div>
+    <!-- Environmental Impact -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="p-3 rounded bg-light">
+            <div class="d-flex align-items-center mb-2">
+                <div class="flex-shrink-0">
+                    <div class="rounded-circle p-2 bg-primary bg-opacity-10">
+                        <i class="fas fa-leaf fa-fw text-primary"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h6 class="mb-0">CO2 Emissions Saved</h6>
+                </div>
+            </div>
+            <h3 class="mb-0">{{ report.data.environmental_impact.co2_saved|default:0|floatformat:1|intcomma }} kg</h3>
+            <small class="text-muted">Equivalent to {{ report.data.environmental_impact.tree_equivalent|default:0 }} trees</small>
+        </div>
+    </div>
+    <!-- Social Impact -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="p-3 rounded bg-light">
+            <div class="d-flex align-items-center mb-2">
+                <div class="flex-shrink-0">
+                    <div class="rounded-circle p-2 bg-warning bg-opacity-10">
+                        <i class="fas fa-utensils fa-fw text-warning"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h6 class="mb-0">Meals Provided</h6>
+                </div>
+            </div>
+            <h3 class="mb-0">{{ report.data.social_impact.meals_provided|default:0|intcomma }}</h3>
+            <small class="text-muted">Serving {{ report.data.social_impact.beneficiaries|default:0|intcomma }} beneficiaries</small>
+        </div>
+    </div>
+    <!-- Economic Impact -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="p-3 rounded bg-light">
+            <div class="d-flex align-items-center mb-2">
+                <div class="flex-shrink-0">
+                    <div class="rounded-circle p-2 bg-info bg-opacity-10">
+                        <i class="fas fa-dollar-sign fa-fw text-info"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h6 class="mb-0">Economic Value</h6>
+                </div>
+            </div>
+            <h3 class="mb-0">${{ report.data.economic_impact.total_value|default:0|floatformat:2|intcomma }}</h3>
+            <small class="text-muted">Cost savings for {{ report.data.economic_impact.organizations|default:0 }} organizations</small>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,160 @@
+{% extends 'transactions/base_transactions.html' %}
+{% block transaction_title %}Rating Details{% endblock %}
+{% block transaction_subtitle %}View detailed information about this rating{% endblock %}
+
+{% block transaction_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Rating Information</h5>
+                <div>
+                    {% if user == rating.rater %}
+                        <a href="{% url 'transactions:ratings_given' %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-arrow-left me-1"></i>Back to Ratings Given
+                        </a>
+                    {% elif user == rating.rated_user %}
+                        <a href="{% url 'transactions:ratings_received' %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-arrow-left me-1"></i>Back to Ratings Received
+                        </a>
+                    {% else %}
+                        <a href="javascript:history.back()" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-arrow-left me-1"></i>Back
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-1">Rating Date</h6>
+                            <p class="mb-0">{{ rating.created_at|date:"F j, Y, g:i a" }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-1">From</h6>
+                            <p class="mb-0">
+                                {% if rating.rater.user_type == 'BUSINESS' %}
+                                    <i class="fas fa-building text-primary me-1"></i>
+                                    {{ rating.rater.businessprofile.company_name }}
+                                {% elif rating.rater.user_type == 'NONPROFIT' %}
+                                    <i class="fas fa-heart text-danger me-1"></i>
+                                    {{ rating.rater.nonprofitprofile.organization_name }}
+                                {% else %}
+                                    <i class="fas fa-user me-1"></i>
+                                    {{ rating.rater.get_full_name }}
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-1">To</h6>
+                            <p class="mb-0">
+                                {% if rating.rated_user.user_type == 'BUSINESS' %}
+                                    <i class="fas fa-building text-primary me-1"></i>
+                                    {{ rating.rated_user.businessprofile.company_name }}
+                                {% elif rating.rated_user.user_type == 'NONPROFIT' %}
+                                    <i class="fas fa-heart text-danger me-1"></i>
+                                    {{ rating.rated_user.nonprofitprofile.organization_name }}
+                                {% else %}
+                                    <i class="fas fa-user me-1"></i>
+                                    {{ rating.rated_user.get_full_name }}
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-1">Rating</h6>
+                            <div class="rating-display">
+                                <span class="display-4 fw-bold me-2">{{ rating.rating }}.0</span>
+                                <div class="rating-stars-display">
+                                    {% for i in "12345"|make_list %}
+                                        {% if forloop.counter <= rating.rating %}
+                                            <i class="fas fa-star"></i>
+                                        {% else %}
+                                            <i class="far fa-star"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% if rating.comment %}
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-1">Comment</h6>
+                            <div class="p-3 bg-light rounded">
+                                <p class="mb-0">{{ rating.comment }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <h5 class="mb-3">Transaction Details</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-1">Food Listing</h6>
+                            <p class="mb-0">{{ rating.transaction.request.listing.title }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-1">Quantity</h6>
+                            <p class="mb-0">{{ rating.transaction.request.quantity_requested }} {{ rating.transaction.request.listing.unit }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-1">Transaction Date</h6>
+                            <p class="mb-0">{{ rating.transaction.transaction_date|date:"F j, Y" }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-1">Supplier</h6>
+                            <p class="mb-0">
+                                {% with supplier=rating.transaction.request.listing.supplier %}
+                                {% if supplier.user_type == 'BUSINESS' %}
+                                    {{ supplier.businessprofile.company_name }}
+                                {% else %}
+                                    {{ supplier.get_full_name }}
+                                {% endif %}
+                                {% endwith %}
+                            </p>
+                        </div>
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-1">Requester</h6>
+                            <p class="mb-0">
+                                {% with requester=rating.transaction.request.requester %}
+                                {% if requester.user_type == 'NONPROFIT' %}
+                                    {{ requester.nonprofitprofile.organization_name }}
+                                {% else %}
+                                    {{ requester.get_full_name }}
+                                {% endif %}
+                                {% endwith %}
+                            </p>
+                        </div>
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-1">Status</h6>
+                            <p class="mb-0">
+                                <span class="badge {% if rating.transaction.status|lower == 'completed' %}bg-success{% else %}bg-secondary{% endif %}">
+                                    {{ rating.transaction.get_status_display }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .rating-stars-display {
+        color: #ffc107;
+        font-size: 1.5rem;
+        display: inline-block;
+    }
+</style>
+{% endblock %}

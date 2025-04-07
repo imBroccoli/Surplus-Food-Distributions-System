@@ -1,0 +1,110 @@
+{% load humanize %}
+
+<div class="row g-4">
+    <!-- Active Users -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="p-3 rounded bg-light">
+            <div class="d-flex align-items-center mb-2">
+                <div class="flex-shrink-0">
+                    <div class="rounded-circle p-2 bg-primary bg-opacity-10">
+                        <i class="fas fa-users fa-fw text-primary"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h6 class="mb-0">Active Users</h6>
+                </div>
+            </div>
+            <h3 class="mb-0">{{ report.data.user_metrics.active_users|default:0|intcomma }}</h3>
+            <small class="text-muted">{{ report.data.user_metrics.active_growth|default:0 }}% from last period</small>
+        </div>
+    </div>
+    <!-- New Signups -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="p-3 rounded bg-light">
+            <div class="d-flex align-items-center mb-2">
+                <div class="flex-shrink-0">
+                    <div class="rounded-circle p-2 bg-success bg-opacity-10">
+                        <i class="fas fa-user-plus fa-fw text-success"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h6 class="mb-0">New Signups</h6>
+                </div>
+            </div>
+            <h3 class="mb-0">{{ report.data.user_metrics.new_signups|default:0|intcomma }}</h3>
+            <small class="text-muted">This period</small>
+        </div>
+    </div>
+    <!-- Engagement Rate -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="p-3 rounded bg-light">
+            <div class="d-flex align-items-center mb-2">
+                <div class="flex-shrink-0">
+                    <div class="rounded-circle p-2 bg-warning bg-opacity-10">
+                        <i class="fas fa-chart-line fa-fw text-warning"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h6 class="mb-0">Engagement Rate</h6>
+                </div>
+            </div>
+            <h3 class="mb-0">{{ report.data.user_metrics.engagement_rate|default:0|floatformat:1 }}%</h3>
+            <small class="text-muted">Of total users</small>
+        </div>
+    </div>
+    <!-- Average Actions -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="p-3 rounded bg-light">
+            <div class="d-flex align-items-center mb-2">
+                <div class="flex-shrink-0">
+                    <div class="rounded-circle p-2 bg-info bg-opacity-10">
+                        <i class="fas fa-mouse-pointer fa-fw text-info"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h6 class="mb-0">Avg Actions/User</h6>
+                </div>
+            </div>
+            <h3 class="mb-0">{{ report.data.user_metrics.avg_actions|default:0|floatformat:1 }}</h3>
+            <small class="text-muted">Per active user</small>
+        </div>
+    </div>
+</div>
+
+<!-- User Distribution -->
+<div class="mt-4">
+    <h6 class="mb-3">User Type Distribution</h6>
+    <div class="row g-4">
+        {% for type in report.data.user_types %}
+        <div class="col-sm-6 col-lg-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span>{{ type.name }}</span>
+                <span class="badge bg-primary">{{ type.count|intcomma }}</span>
+            </div>
+            <div class="progress" style="height: 8px;">
+                <div class="progress-bar" style="width: {{ type.percentage }}%"></div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Top Activities -->
+<div class="mt-4">
+    <h6 class="mb-3">Most Common Activities</h6>
+    <div class="row g-4">
+        {% for activity in report.data.top_activities %}
+        <div class="col-sm-6 col-lg-3">
+            <div class="p-3 rounded bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>{{ activity.name }}</span>
+                    <span class="badge bg-primary">{{ activity.count|intcomma }}</span>
+                </div>
+                <div class="progress mt-2" style="height: 4px;">
+                    <div class="progress-bar" style="width: {{ activity.percentage }}%"></div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>

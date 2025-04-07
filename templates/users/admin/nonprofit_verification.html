@@ -1,0 +1,409 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Nonprofit Verification - Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header with Stats -->
+    <div class="row mb-4">
+        <div class="col-12 col-lg-8">
+            <h1 class="h2 mb-2">Nonprofit Verification</h1>
+            <p class="text-muted d-flex align-items-center">
+                <i class="fas fa-clipboard-check me-2"></i>
+                Review and verify nonprofit organization registrations
+            </p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-medium">
+                        <i class="fas fa-filter me-2"></i>Verification Status
+                    </label>
+                    <select name="status" class="form-select">
+                        <option value="">All Status</option>
+                        <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>
+                            <i class="fas fa-clock"></i> Pending
+                        </option>
+                        <option value="verified" {% if request.GET.status == 'verified' %}selected{% endif %}>
+                            <i class="fas fa-check"></i> Verified
+                        </option>
+                        <option value="rejected" {% if request.GET.status == 'rejected' %}selected{% endif %}>
+                            <i class="fas fa-times"></i> Rejected
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-medium">
+                        <i class="fas fa-building me-2"></i>Organization Type
+                    </label>
+                    <select name="type" class="form-select">
+                        <option value="">All Types</option>
+                        <option value="CHARITY" {% if request.GET.type == 'CHARITY' %}selected{% endif %}>Registered Charity</option>
+                        <option value="FOUNDATION" {% if request.GET.type == 'FOUNDATION' %}selected{% endif %}>Foundation</option>
+                        <option value="SOCIAL_ENTERPRISE" {% if request.GET.type == 'SOCIAL_ENTERPRISE' %}selected{% endif %}>Social Enterprise</option>
+                        <option value="COMMUNITY_GROUP" {% if request.GET.type == 'COMMUNITY_GROUP' %}selected{% endif %}>Community Group</option>
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-2"></i>Apply Filters
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Nonprofits List -->
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="border-0">Organization</th>
+                        <th class="border-0">Type</th>
+                        <th class="border-0">Registration</th>
+                        <th class="border-0">Contact</th>
+                        <th class="border-0">Documents</th>
+                        <th class="border-0">Status</th>
+                        <th class="border-0">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for profile in page_obj %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light rounded-circle p-2 me-3">
+                                    <i class="fas fa-building text-primary"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">{{ profile.organization_name }}</h6>
+                                    <small class="text-muted">{{ profile.user.email }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-info text-white">
+                                {{ profile.get_organization_type_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if profile.registration_number %}
+                                <code class="bg-light px-2 py-1 rounded">{{ profile.registration_number }}</code>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-user me-2 text-muted"></i>
+                                {{ profile.primary_contact }}
+                            </div>
+                        </td>
+                        <td>
+                            {% if profile.verification_documents %}
+                                {% with doc_url=MEDIA_URL|add:profile.verification_documents.name %}
+                                    <a href="{{ doc_url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                        <i class="fas fa-file-alt me-1"></i>View Documents
+                                    </a>
+                                {% endwith %}
+                            {% else %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>No Documents
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if profile.verified_nonprofit %}
+                                <span class="badge bg-success d-inline-flex align-items-center">
+                                    <i class="fas fa-check-circle me-1"></i>Verified
+                                </span>
+                            {% elif profile.rejection_reason %}
+                                <span class="badge bg-danger d-inline-flex align-items-center">
+                                    <i class="fas fa-times-circle me-1"></i>Rejected
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning d-inline-flex align-items-center">
+                                    <i class="fas fa-clock me-1"></i>Pending
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group position-static">
+                                <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                    <li>
+                                        <button class="dropdown-item d-flex align-items-center" onclick="showVerificationModal('{{ profile.id }}', '{{ profile.organization_name|escapejs }}')">
+                                            <i class="fas fa-clipboard-check text-primary me-2"></i>Review Verification
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <div class="text-muted">
+                                <i class="fas fa-building fa-3x mb-3"></i>
+                                <h5>No Organizations Found</h5>
+                                <p class="mb-0">No nonprofit organizations match your filter criteria.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                    <a class="page-link" href="?page={{ num }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}">{{ num }}</a>
+                </li>
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<!-- Verification Modal -->
+<div class="modal fade" id="verificationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0">
+                <h5 class="modal-title d-flex align-items-center">
+                    <i class="fas fa-clipboard-check text-primary me-2"></i>
+                    Review Nonprofit Verification
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="verificationForm">
+                    <input type="hidden" id="profileId" name="profile_id">
+                    <div class="mb-4">
+                        <label class="form-label text-muted small">Organization Name</label>
+                        <p class="form-control-plaintext fw-medium" id="organizationName"></p>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label d-flex align-items-center">
+                            <i class="fas fa-check-circle me-2 text-success"></i>
+                            Verification Decision
+                        </label>
+                        <select class="form-select" id="verificationDecision" name="decision" required>
+                            <option value="">Select Decision</option>
+                            <option value="verify">Verify Organization</option>
+                            <option value="reject">Reject Verification</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="rejectionReasonGroup" style="display: none;">
+                        <label class="form-label d-flex align-items-center">
+                            <i class="fas fa-exclamation-circle me-2 text-danger"></i>
+                            Rejection Reason
+                        </label>
+                        <textarea class="form-control" id="rejectionReason" name="rejection_reason" rows="3"></textarea>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Please provide a clear reason for rejecting the verification request.
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-primary" onclick="submitVerification()">
+                    <i class="fas fa-check me-1"></i>Submit Decision
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showVerificationModal(profileId, organizationName) {
+    document.getElementById('profileId').value = profileId;
+    document.getElementById('organizationName').textContent = organizationName;
+    document.getElementById('verificationDecision').value = '';
+    document.getElementById('rejectionReason').value = '';
+    document.getElementById('rejectionReasonGroup').style.display = 'none';
+    
+    new bootstrap.Modal(document.getElementById('verificationModal')).show();
+}
+
+document.getElementById('verificationDecision').addEventListener('change', function() {
+    const rejectionGroup = document.getElementById('rejectionReasonGroup');
+    rejectionGroup.style.display = this.value === 'reject' ? 'block' : 'none';
+    
+    // Clear rejection reason when switching to verify
+    if (this.value === 'verify') {
+        document.getElementById('rejectionReason').value = '';
+    }
+});
+
+function submitVerification() {
+    const form = document.getElementById('verificationForm');
+    const formData = new FormData(form);
+    const decision = document.getElementById('verificationDecision').value;
+    
+    // Validate form
+    if (!decision) {
+        sweetify.fire({
+            icon: 'error',
+            title: 'Validation Error',
+            text: 'Please select a verification decision',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+        });
+        return;
+    }
+    
+    if (decision === 'reject' && !document.getElementById('rejectionReason').value.trim()) {
+        sweetify.fire({
+            icon: 'error',
+            title: 'Validation Error',
+            text: 'Please provide a reason for rejection',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+        });
+        return;
+    }
+
+    // Show confirmation dialog
+    sweetify.fire({
+        title: 'Confirm Decision',
+        text: `Are you sure you want to ${decision} this organization?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: decision === 'verify' ? '#198754' : '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: `Yes, ${decision}`,
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Show processing state
+            sweetify.fire({
+                title: 'Processing...',
+                text: 'Please wait while we process your request',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    sweetify.showLoading();
+                }
+            });
+
+            // Submit the form
+            fetch('{% url "users:verify_nonprofit" %}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    sweetify.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: `Organization ${decision === 'verify' ? 'verified' : 'rejected'} successfully`,
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true
+                    }).then(() => {
+                        // Close modal and refresh page
+                        bootstrap.Modal.getInstance(document.getElementById('verificationModal')).hide();
+                        window.location.reload();
+                    });
+                } else {
+                    sweetify.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.error || 'An error occurred while processing your request',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                sweetify.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'An error occurred while processing your request',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+            });
+        }
+    });
+}
+
+{% if messages %}
+    {% for message in messages %}
+        sweetify.fire({
+            icon: '{% if message.tags == "error" %}error{% elif message.tags == "success" %}success{% elif message.tags == "warning" %}warning{% else %}info{% endif %}',
+            title: '{{ message.tags|title }}',
+            text: '{{ message|escapejs }}',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+        });
+    {% endfor %}
+{% endif %}
+
+// Add loading state to filter form
+document.querySelector('form[method="get"]').addEventListener('submit', function(e) {
+    const button = this.querySelector('button[type="submit"]');
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Applying Filters...';
+});
+</script>
+{% endblock %}

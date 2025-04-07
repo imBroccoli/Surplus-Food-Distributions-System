@@ -1,0 +1,743 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Welcome - Surplus Food Distribution System{% endblock %}
+
+{% block extra_css %}
+<style>
+.feature-icon {
+    font-size: 2.5rem;
+    color: var(--bs-primary);
+    margin-bottom: 1rem;
+    transition: transform 0.3s ease;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.75rem;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(0,0,0,0.05);
+    height: 100%;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 25px rgba(0,0,0,0.1);
+}
+
+.stat-card:hover .feature-icon {
+    transform: scale(1.1);
+}
+
+.stat-card .btn {
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover .btn-primary {
+    background: linear-gradient(45deg, var(--bs-primary), #0099ff);
+    border-color: transparent;
+    box-shadow: 0 5px 15px rgba(13, 110, 253, 0.2);
+}
+
+.stat-card:hover .btn-outline-primary {
+    background: var(--bs-primary);
+    color: white;
+    border-color: var(--bs-primary);
+}
+
+.welcome-banner {
+    background: linear-gradient(135deg, #0d6efd 0%, #0099ff 100%);
+    color: white;
+    padding: 3.5rem 0;
+    margin-bottom: 2.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.welcome-banner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('{% static "img/pattern.svg" %}') repeat;
+    opacity: 0.1;
+}
+
+.welcome-banner .container {
+    position: relative;
+    z-index: 1;
+}
+
+.admin-info-card, .profile-card {
+    background: rgba(255,255,255,0.98);
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+}
+
+.admin-info-card:hover, .profile-card:hover {
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+.info-label {
+    font-size: 0.875rem;
+    color: var(--bs-gray-600);
+    margin-bottom: 0.25rem;
+}
+
+.info-value {
+    font-size: 1rem;
+    color: var(--bs-gray-800);
+    margin-bottom: 0;
+}
+
+.dashboard-section {
+    margin-bottom: 3rem;
+}
+
+.dashboard-section-title {
+    margin-bottom: 1.5rem;
+    position: relative;
+    padding-left: 1rem;
+    border-left: 4px solid var(--bs-primary);
+}
+
+.metric-value {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--bs-primary);
+    margin-bottom: 0.5rem;
+    background: linear-gradient(45deg, var(--bs-primary), #0099ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.metric-label {
+    font-size: 0.875rem;
+    color: var(--bs-gray-600);
+}
+
+.progress-slim {
+    height: 0.5rem;
+    border-radius: 1rem;
+}
+
+.profile-stats {
+    padding: 1.5rem;
+    border-radius: 12px;
+    background: rgba(var(--bs-primary-rgb), 0.03);
+    border: 1px solid rgba(var(--bs-primary-rgb), 0.1);
+}
+
+.profile-stats .stat-item {
+    text-align: center;
+    padding: 1rem;
+}
+
+.profile-stats .stat-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--bs-primary);
+    margin-bottom: 0.25rem;
+}
+
+.profile-stats .stat-label {
+    font-size: 0.875rem;
+    color: var(--bs-gray-600);
+}
+
+.volunteer-status-card {
+    background: linear-gradient(45deg, rgba(var(--bs-primary-rgb), 0.03), rgba(var(--bs-primary-rgb), 0.08));
+    border-radius: 12px;
+    border: 1px solid rgba(var(--bs-primary-rgb), 0.1);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Welcome Banner -->
+<div class="welcome-banner">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h1 class="display-4 fw-bold mb-2">
+                    {% if user.user_type == 'ADMIN' %}
+                        Welcome to Admin Dashboard
+                    {% elif user.user_type == 'BUSINESS' %}
+                        Business Dashboard
+                    {% elif user.user_type == 'NONPROFIT' %}
+                        Nonprofit Dashboard
+                    {% elif user.user_type == 'VOLUNTEER' %}
+                        Volunteer Dashboard
+                    {% else %}
+                        Welcome Dashboard
+                    {% endif %}
+                </h1>
+                <p class="lead mb-0 opacity-90">
+                    {% if user.user_type == 'ADMIN' %}
+                        Monitor and manage platform operations efficiently
+                    {% elif user.user_type == 'BUSINESS' %}
+                        Manage your surplus food contributions and make a difference
+                    {% elif user.user_type == 'NONPROFIT' %}
+                        Find and distribute surplus food to support your community
+                    {% elif user.user_type == 'VOLUNTEER' %}
+                        Help connect surplus food with those who need it most
+                    {% else %}
+                        Explore ways to reduce food waste and support sustainability
+                    {% endif %}
+                </p>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                <div class="bg-white text-primary p-4 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 100px; height: 100px">
+                    {% if user.user_type == 'ADMIN' %}
+                        <i class="fas fa-shield-alt fa-3x"></i>
+                    {% elif user.user_type == 'BUSINESS' %}
+                        <i class="fas fa-building fa-3x"></i>
+                    {% elif user.user_type == 'NONPROFIT' %}
+                        <i class="fas fa-hand-holding-heart fa-3x"></i>
+                    {% elif user.user_type == 'VOLUNTEER' %}
+                        <i class="fas fa-hands-helping fa-3x"></i>
+                    {% else %}
+                        <i class="fas fa-user fa-3x"></i>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- User-specific Dashboard -->
+    <div class="user-dashboard">
+        {% if user.user_type == 'ADMIN' %}
+            <!-- Core Functions -->
+            <div class="dashboard-section">
+                <h2 class="h3 dashboard-section-title mb-4">Core Functions</h2>
+                <div class="row g-4">
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="text-center">
+                                <i class="fas fa-users-cog feature-icon"></i>
+                                <h4 class="h5 mb-3">User Management</h4>
+                                <p class="text-muted mb-4">Manage user accounts and permissions</p>
+                                <a href="{% url 'users:admin_users_list' %}" class="btn btn-primary w-100">
+                                    <i class="fas fa-users me-2"></i>Manage Users
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="text-center">
+                                <i class="fas fa-check-circle feature-icon"></i>
+                                <h4 class="h5 mb-3">Nonprofit Verification</h4>
+                                <p class="text-muted mb-4">Review and verify nonprofit organizations</p>
+                                <a href="{% url 'users:nonprofit_verification_list' %}" class="btn btn-primary w-100">
+                                    <i class="fas fa-clipboard-check me-2"></i>Review Verifications
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="text-center">
+                                <i class="fas fa-chart-line feature-icon"></i>
+                                <h4 class="h5 mb-3">System Analytics</h4>
+                                <p class="text-muted mb-4">Monitor platform performance</p>
+                                <a href="{% url 'analytics:system_analytics' %}" class="btn btn-primary w-100">
+                                    <i class="fas fa-chart-bar me-2"></i>View Analytics
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="text-center">
+                                <i class="fas fa-file-alt feature-icon"></i>
+                                <h4 class="h5 mb-3">Reports</h4>
+                                <p class="text-muted mb-4">Generate and manage system reports</p>
+                                <a href="{% url 'analytics:reports_dashboard' %}" class="btn btn-primary w-100">
+                                    <i class="fas fa-file-download me-2"></i>View Reports
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="dashboard-section">
+                <h2 class="h3 dashboard-section-title mb-4">Quick Actions</h2>
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <div class="text-center">
+                                <i class="fas fa-bell feature-icon"></i>
+                                <h4 class="h5 mb-3">Notifications</h4>
+                                <p class="text-muted mb-4">Manage system notifications</p>
+                                <a href="{% url 'notifications:settings' %}" class="btn btn-primary w-100">
+                                    <i class="fas fa-cog me-2"></i>Manage Notifications
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if user.admin_profile %}
+            <!-- Admin Information -->
+            <div class="dashboard-section">
+                <h2 class="h3 dashboard-section-title mb-4">Admin Information</h2>
+                <div class="admin-info-card p-4">
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="info-group">
+                                <p class="info-label"><i class="fas fa-building me-2"></i>Department</p>
+                                <p class="info-value">{{ user.admin_profile.get_department_display }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="info-group">
+                                <p class="info-label"><i class="fas fa-clock me-2"></i>Last Login</p>
+                                <p class="info-value">{{ user.last_login|date:"F j, Y H:i" }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="info-group">
+                                <p class="info-label"><i class="fas fa-network-wired me-2"></i>IP Address</p>
+                                <p class="info-value">{{ user.admin_profile.last_login_ip|default:"Not available" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+        {% elif user.user_type == 'BUSINESS' %}
+            <!-- Business Core Functions -->
+            <div class="dashboard-section">
+                <h2 class="h3 dashboard-section-title mb-4">Manage Food Listings</h2>
+                <div class="row g-4">
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="text-center">
+                                <i class="fas fa-plus-circle feature-icon"></i>
+                                <h4 class="h5 mb-3">Create Listing</h4>
+                                <p class="text-muted mb-4">Add new surplus food listing</p>
+                                <a href="{% url 'listings:create' %}" class="btn btn-primary w-100">
+                                    <i class="fas fa-plus me-2"></i>New Listing
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="text-center">
+                                <i class="fas fa-box-open feature-icon"></i>
+                                <h4 class="h5 mb-3">My Listings</h4>
+                                <p class="text-muted mb-4">Manage existing listings</p>
+                                <a href="{% url 'listings:list' %}" class="btn btn-primary w-100">
+                                    <i class="fas fa-list me-2"></i>View Listings
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="text-center">
+                                <i class="fas fa-tasks feature-icon"></i>
+                                <h4 class="h5 mb-3">Food Requests</h4>
+                                <p class="text-muted mb-4">Manage incoming requests</p>
+                                <a href="{% url 'transactions:manage_requests' %}" class="btn btn-primary w-100">
+                                    <i class="fas fa-inbox me-2"></i>View Requests
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="text-center">
+                                <i class="fas fa-chart-line feature-icon"></i>
+                                <h4 class="h5 mb-3">Analytics</h4>
+                                <p class="text-muted mb-4">Track your impact</p>
+                                <a href="{% url 'analytics:business_analytics' %}" class="btn btn-primary w-100">
+                                    <i class="fas fa-chart-bar me-2"></i>View Analytics
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Business Notification Preferences -->
+            <div class="dashboard-section">
+                <h2 class="h3 dashboard-section-title mb-4">Notification Preferences</h2>
+                <div class="profile-card p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h5 class="mb-3">Request Notifications</h5>
+                            <p class="text-muted mb-0">Get notified about new food requests and updates</p>
+                        </div>
+                        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                            <a href="{% url 'notifications:settings' %}" class="btn btn-primary">
+                                <i class="fas fa-bell me-2"></i>Manage Alerts
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        {% elif user.user_type == 'NONPROFIT' %}
+            <!-- Nonprofit Core Functions -->
+            <div class="dashboard-section">
+                <h2 class="h3 dashboard-section-title mb-4">Food Resources</h2>
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="stat-card">
+                            <div class="text-center">
+                                <i class="fas fa-search feature-icon"></i>
+                                <h4 class="h5 mb-3">Find Food</h4>
+                                <p class="text-muted mb-4">Browse available food listings</p>
+                                <a href="{% url 'listings:browse' %}" class="btn btn-primary w-100">
+                                    <i class="fas fa-list me-2"></i>Browse Listings
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="stat-card">
+                            <div class="text-center">
+                                <i class="fas fa-clipboard-list feature-icon"></i>
+                                <h4 class="h5 mb-3">My Requests</h4>
+                                <p class="text-muted mb-4">Track your food requests</p>
+                                <a href="{% url 'transactions:requests' %}" class="btn btn-primary w-100">
+                                    <i class="fas fa-tasks me-2"></i>View Requests
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nonprofit Notifications -->
+            <div class="dashboard-section">
+                <h2 class="h3 dashboard-section-title mb-4">Notification Preferences</h2>
+                <div class="profile-card p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h5 class="mb-3">Food Listing Alerts</h5>
+                            <p class="text-muted mb-0">Get notified when new listings match your requirements</p>
+                        </div>
+                        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                            <a href="{% url 'notifications:settings' %}" class="btn btn-primary">
+                                <i class="fas fa-bell me-2"></i>Manage Alerts
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        {% elif user.user_type == 'VOLUNTEER' %}
+            <!-- Volunteer Core Functions -->
+            <div class="dashboard-section">
+                <h2 class="h3 dashboard-section-title mb-4">Delivery Management</h2>
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <div class="text-center">
+                                <i class="fas fa-hands-helping feature-icon"></i>
+                                <h4 class="h5 mb-3">Available Tasks</h4>
+                                <p class="text-muted mb-4">Find opportunities to help</p>
+                                <a href="{% url 'transactions:available_deliveries' %}" class="btn btn-primary w-100">
+                                    <i class="fas fa-search me-2"></i>Find Deliveries
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <div class="text-center">
+                                <i class="fas fa-truck feature-icon"></i>
+                                <h4 class="h5 mb-3">My Deliveries</h4>
+                                <p class="text-muted mb-4">Track assigned deliveries</p>
+                                <a href="{% url 'transactions:my_deliveries' %}" class="btn btn-primary w-100">
+                                    <i class="fas fa-route me-2"></i>Manage Deliveries
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <div class="text-center">
+                                <i class="fas fa-chart-bar feature-icon"></i>
+                                <h4 class="h5 mb-3">My Impact</h4>
+                                <p class="text-muted mb-4">View your contribution</p>
+                                {% with stats=user.volunteer_profile %}
+                                <div class="profile-stats mb-3">
+                                    <div class="row g-0">
+                                        <div class="col-6 stat-item">
+                                            <div class="stat-value">{{ stats.completed_deliveries|default:"0" }}</div>
+                                            <div class="stat-label">Deliveries</div>
+                                        </div>
+                                        <div class="col-6 stat-item">
+                                            <div class="stat-value">{{ stats.total_impact|default:"0"|floatformat:1 }}</div>
+                                            <div class="stat-label">Kg Delivered</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endwith %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if user.volunteer_profile.active %}
+            <!-- Volunteer Status -->
+            <div class="dashboard-section">
+                <h2 class="h3 dashboard-section-title mb-4">My Volunteer Status</h2>
+                <div class="volunteer-status-card p-4">
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="info-group">
+                                <p class="info-label"><i class="fas fa-calendar-alt me-2"></i>Availability</p>
+                                <p class="info-value">{{ user.volunteer_profile.get_availability_display }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="info-group">
+                                <p class="info-label"><i class="fas fa-truck me-2"></i>Transportation</p>
+                                <p class="info-value">{{ user.volunteer_profile.get_transportation_method_display }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="info-group">
+                                <p class="info-label"><i class="fas fa-map-marker-alt me-2"></i>Service Area</p>
+                                <p class="info-value">{{ user.volunteer_profile.service_area }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Volunteer Notification Preferences -->
+            <div class="dashboard-section">
+                <h2 class="h3 dashboard-section-title mb-4">Notification Preferences</h2>
+                <div class="profile-card p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h5 class="mb-3">Delivery Notifications</h5>
+                            <p class="text-muted mb-0">Stay updated about available deliveries and assignment changes</p>
+                        </div>
+                        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                            <a href="{% url 'notifications:settings' %}" class="btn btn-primary">
+                                <i class="fas fa-bell me-2"></i>Manage Alerts
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        {% else %}
+            <!-- Consumer Dashboard -->
+            <div class="dashboard-section">
+                <h2 class="h3 dashboard-section-title mb-4">Explore & Support</h2>
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <div class="text-center">
+                                <i class="fas fa-map-marker-alt feature-icon"></i>
+                                <h4 class="h5 mb-3">Find Food</h4>
+                                <p class="text-muted mb-4">Browse available food listings</p>
+                                <a href="{% url 'transactions:browse_listings' %}" class="btn btn-primary w-100">
+                                    <i class="fas fa-search me-2"></i>Browse Listings
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card">
+                            <div class="text-center">
+                                <i class="fas fa-clipboard-list feature-icon"></i>
+                                <h4 class="h5 mb-3">My Requests</h4>
+                                <p class="text-muted mb-4">Track your food requests</p>
+                                <a href="{% url 'transactions:requests' %}" class="btn btn-primary w-100">
+                                    <i class="fas fa-tasks me-2"></i>View Requests
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Consumer Notification Preferences -->
+            <div class="dashboard-section">
+                <h2 class="h3 dashboard-section-title mb-4">Notification Preferences</h2>
+                <div class="profile-card p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h5 class="mb-3">Food Availability Alerts</h5>
+                            <p class="text-muted mb-0">Get notified about new food listings in your area</p>
+                        </div>
+                        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                            <a href="{% url 'notifications:settings' %}" class="btn btn-primary">
+                                <i class="fas fa-bell me-2"></i>Manage Alerts
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Direct SweetAlert check for welcome message from registration
+    if ({{ request.session.direct_sweetalert|default:"false"|safe }}) {
+        // Show the welcome message
+        Swal.fire({
+            title: "Success!",
+            text: "Your account has been created successfully. Welcome!",
+            icon: "success",
+            confirmButtonText: "Continue"
+        });
+        
+        // Clear the message to prevent showing it again on refresh
+        fetch('/users/clear-welcome-message/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
+            }
+        });
+    }
+    
+    // NEW CODE: Check for incomplete profile alert
+    {% if request.session.incomplete_profile_alert %}
+        // Show the profile completion message with a slight delay to avoid conflict with welcome message
+        setTimeout(function() {
+            Swal.fire({
+                title: "Profile Incomplete",
+                text: "Please complete your profile information. Some required information is missing or using default values.",
+                icon: "info",
+                confirmButtonText: "Complete Profile",
+                showConfirmButton: true,
+                timer: null,
+                position: "center"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = "{% url 'users:edit_profile' %}";
+                }
+            });
+            
+            // Clear both flags to prevent showing again on refresh
+            fetch('/users/clear-welcome-message/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json'
+                }
+            });
+        }, 500);  // 500ms delay to ensure it comes after welcome message if both are present
+    {% endif %}
+    
+    // Skip message handling as it's now handled by Sweetify 
+    // (sweetify tag in base.html will take care of this)
+    
+    // Handle card hover animations
+    const cards = document.querySelectorAll('.stat-card');
+    cards.forEach(card => {
+        card.addEventListener('mouseenter', () => {
+            card.querySelector('.feature-icon')?.classList.add('scale-110');
+        });
+        card.addEventListener('mouseleave', () => {
+            card.querySelector('.feature-icon')?.classList.remove('scale-110');
+        });
+    });
+    
+    // Handle link clicks with loading state
+    document.querySelectorAll('a[href]:not([target="_blank"])').forEach(link => {
+        link.addEventListener('click', function(e) {
+            // Skip if modifier keys are pressed or it's a dropdown toggle
+            if (e.metaKey || e.ctrlKey || e.shiftKey || link.hasAttribute('data-bs-toggle')) {
+                return;
+            }
+            
+            // Show loading state for navigation using Sweetify
+            sweetify.fire({
+                title: 'Loading...',
+                text: 'Please wait while we process your request',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    sweetify.showLoading();
+                }
+            });
+        });
+    });
+    
+    // Handle notification preference updates
+    const notificationForm = document.querySelector('.notification-preferences-form');
+    if (notificationForm) {
+        notificationForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            sweetify.fire({
+                title: 'Updating...',
+                text: 'Saving your notification preferences',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    sweetify.showLoading();
+                }
+            });
+            // Submit form
+            this.submit();
+        });
+    }
+    
+    // Volunteer status updates
+    const volunteerStatusForm = document.querySelector('.volunteer-status-form');
+    if (volunteerStatusForm) {
+        volunteerStatusForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            sweetify.fire({
+                title: 'Confirm Status Update',
+                text: 'Are you sure you want to update your availability status?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, update',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    sweetify.fire({
+                        title: 'Updating...',
+                        text: 'Updating your availability status',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            sweetify.showLoading();
+                        }
+                    });
+                    
+                    this.submit();
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

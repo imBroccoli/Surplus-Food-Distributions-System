@@ -1,0 +1,202 @@
+{% extends 'transactions/base_transactions.html' %}
+{% block transaction_title %}Ratings Given{% endblock %}
+{% block transaction_subtitle %}Review the ratings you've given to others{% endblock %}
+
+{% block transaction_content %}
+<div class="container-fluid px-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-xl-10">
+            <div class="card shadow mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center py-3">
+                    <h5 class="mb-0 text-primary">Your Ratings</h5>
+                    <a href="{% url 'transactions:ratings_received' %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-star me-1"></i>View Ratings Received
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    {% if page_obj %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="px-4">Date</th>
+                                        <th class="px-4">Rated User</th>
+                                        <th class="px-4">Rating</th>
+                                        <th class="px-4">Transaction</th>
+                                        <th class="px-4">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for rating in page_obj %}
+                                    <tr>
+                                        <td class="px-4">{{ rating.created_at|date:"M d, Y" }}</td>
+                                        <td class="px-4">
+                                            {% if rating.rated_user.user_type == 'BUSINESS' %}
+                                                <i class="fas fa-building text-primary me-1"></i>
+                                                {{ rating.rated_user.businessprofile.company_name }}
+                                            {% elif rating.rated_user.user_type == 'NONPROFIT' %}
+                                                <i class="fas fa-heart text-danger me-1"></i>
+                                                {{ rating.rated_user.nonprofitprofile.organization_name }}
+                                            {% else %}
+                                                <i class="fas fa-user me-1"></i>
+                                                {{ rating.rated_user.get_full_name }}
+                                            {% endif %}
+                                        </td>
+                                        <td class="px-4">
+                                            <div class="rating-stars-display">
+                                                {% for i in "12345"|make_list %}
+                                                    {% if forloop.counter <= rating.rating %}
+                                                        <i class="fas fa-star text-warning"></i>
+                                                    {% else %}
+                                                        <i class="far fa-star text-muted"></i>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        </td>
+                                        <td class="px-4">
+                                            {% with txn=rating.transaction %}
+                                                {{ txn.request.listing.title|truncatechars:30 }}
+                                            {% endwith %}
+                                        </td>
+                                        <td class="px-4">
+                                            <a href="{% url 'transactions:rating_detail' rating.id %}" class="btn btn-sm btn-outline-secondary">
+                                                <i class="fas fa-eye me-1"></i>View
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        {% if page_obj.has_other_pages %}
+                            <div class="px-4 py-3 border-top">
+                                <nav aria-label="Page navigation">
+                                    <ul class="pagination justify-content-center">
+                                        {% if page_obj.has_previous %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page=1" aria-label="First">
+                                                    <span aria-hidden="true">&laquo;&laquo;</span>
+                                                </a>
+                                            </li>
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                                                    <span aria-hidden="true">&laquo;</span>
+                                                </a>
+                                            </li>
+                                        {% else %}
+                                            <li class="page-item disabled">
+                                                <a class="page-link" href="#" aria-label="First">
+                                                    <span aria-hidden="true">&laquo;&laquo;</span>
+                                                </a>
+                                            </li>
+                                            <li class="page-item disabled">
+                                                <a class="page-link" href="#" aria-label="Previous">
+                                                    <span aria-hidden="true">&laquo;</span>
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                        
+                                        {% for num in page_obj.paginator.page_range %}
+                                            {% if page_obj.number == num %}
+                                                <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
+                                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                                <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                                            {% endif %}
+                                        {% endfor %}
+                                        
+                                        {% if page_obj.has_next %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                                                    <span aria-hidden="true">&raquo;</span>
+                                                </a>
+                                            </li>
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" aria-label="Last">
+                                                    <span aria-hidden="true">&raquo;&raquo;</span>
+                                                </a>
+                                            </li>
+                                        {% else %}
+                                            <li class="page-item disabled">
+                                                <a class="page-link" href="#" aria-label="Next">
+                                                    <span aria-hidden="true">&raquo;</span>
+                                                </a>
+                                            </li>
+                                            <li class="page-item disabled">
+                                                <a class="page-link" href="#" aria-label="Last">
+                                                    <span aria-hidden="true">&raquo;&raquo;</span>
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                </nav>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-info mx-4 my-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            You haven't given any ratings yet. When you rate your transactions, they will appear here.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .rating-stars-display {
+        color: #ffc107;
+        font-size: 1rem;
+        white-space: nowrap;
+    }
+    .table th {
+        font-weight: 600;
+        color: #495057;
+    }
+    .table td {
+        vertical-align: middle;
+        color: #212529;
+    }
+    .card {
+        border: none;
+        border-radius: 0.5rem;
+    }
+    .card-header {
+        background-color: #fff;
+        border-bottom: 1px solid rgba(0,0,0,.05);
+    }
+    .table thead th {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid rgba(0,0,0,.05);
+    }
+    .btn-outline-primary {
+        border-width: 2px;
+    }
+    .btn-outline-primary:hover {
+        background-color: #0d6efd10;
+    }
+    .btn-outline-secondary {
+        border-width: 2px;
+    }
+    .btn-outline-secondary:hover {
+        background-color: #6c757d10;
+    }
+    .pagination {
+        margin-bottom: 0;
+    }
+    .page-link {
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.25rem;
+        margin: 0 0.125rem;
+    }
+    .alert {
+        border-radius: 0;
+        border: none;
+        border-left: 4px solid #0dcaf0;
+    }
+</style>
+{% endblock %}

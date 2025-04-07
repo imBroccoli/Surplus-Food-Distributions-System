@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}Analytics Dashboard{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h2 mb-0">Analytics Dashboard</h1>
+            <p class="text-muted">Insights and performance metrics for your organization</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Impact Metrics</h5>
+                    <p class="card-text">Track your organization's social and environmental impact</p>
+                    <a href="{% url 'analytics:impact_dashboard' %}" class="btn btn-primary">View Impact</a>
+                </div>
+            </div>
+        </div>
+
+        {% if user.is_staff or user.is_superuser %}
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">System Analytics</h5>
+                    <p class="card-text">Monitor system performance and usage statistics</p>
+                    <a href="{% url 'analytics:system_analytics' %}" class="btn btn-primary">View System Analytics</a>
+                </div>
+            </div>
+        </div>
+        {% elif user.user_type == 'BUSINESS' %}
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Business Analytics</h5>
+                    <p class="card-text">Review your business contribution and impact</p>
+                    <a href="{% url 'analytics:business_analytics' %}" class="btn btn-primary">View Business Analytics</a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if user.is_staff or user.is_superuser %}
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">User Activity</h5>
+                    <p class="card-text">Track user activities and engagement metrics</p>
+                    <a href="{% url 'analytics:user_activity' %}" class="btn btn-primary">View User Activity</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Reports</h5>
+                    <p class="card-text">Generate and schedule detailed reports</p>
+                    <a href="{% url 'analytics:reports_dashboard' %}" class="btn btn-primary">View Reports</a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

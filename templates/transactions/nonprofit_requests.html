@@ -1,0 +1,164 @@
+{% extends 'transactions/base_transactions.html' %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Nonprofit Food Requests</h2>
+            <p class="text-muted">Manage your organization's bulk food requests and track impact</p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'transactions:requests' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>New Request
+            </a>
+        </div>
+    </div>
+
+    {% if not is_verified %}
+    <div class="alert alert-warning mb-4">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        Your organization is not yet verified. Some listings may be unavailable until verification is complete.
+    </div>
+    {% endif %}
+
+    <!-- Impact Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <h6 class="card-title">Total Beneficiaries</h6>
+                    <h3 class="mb-0">{{ metrics.total_beneficiaries|default:0 }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <h6 class="card-title">Total Food Quantity</h6>
+                    <h3 class="mb-0">{{ metrics.total_quantity|floatformat:2 }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <h6 class="card-title">Completed Requests</h6>
+                    <h3 class="mb-0">{{ metrics.completed_requests }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white h-100">
+                <div class="card-body">
+                    <h6 class="card-title">Pending Requests</h6>
+                    <h3 class="mb-0">{{ metrics.pending_requests }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Requests List -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Your Bulk Food Requests</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Food Item</th>
+                        <th>Quantity</th>
+                        <th>Beneficiaries</th>
+                        <th>Pickup Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for request in page_obj %}
+                    <tr>
+                        <td>
+                            <strong>{{ request.listing.title }}</strong>
+                            <br>
+                            <small class="text-muted">from {{ request.listing.supplier.get_full_name }}</small>
+                        </td>
+                        <td>{{ request.quantity_requested }} {{ request.listing.unit }}</td>
+                        <td>{{ request.beneficiary_count }}</td>
+                        <td>{{ request.pickup_date|date:"M d, Y H:i" }}</td>
+                        <td>
+                            {% if request.status == 'PENDING' %}
+                                <span class="badge bg-warning">Pending</span>
+                            {% elif request.status == 'APPROVED' %}
+                                <span class="badge bg-success">Approved</span>
+                            {% elif request.status == 'REJECTED' %}
+                                <span class="badge bg-danger">Rejected</span>
+                            {% elif request.status == 'COMPLETED' %}
+                                <span class="badge bg-info">Completed</span>
+                            {% elif request.status == 'CANCELLED' %}
+                                <span class="badge bg-secondary">Cancelled</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if request.status == 'COMPLETED' and request.transaction %}
+                                {% if not request.transaction.ratings.filter(rater=user).exists %}
+                                    <a href="{% url 'transactions:rate_transaction' request.transaction.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-star me-1"></i>Rate
+                                    </a>
+                                {% endif %}
+                            {% endif %}
+                            
+                            {% if request.status == 'PENDING' %}
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        onclick="cancelRequest({{ request.id }})">
+                                    <i class="fas fa-times me-1"></i>Cancel
+                                </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <i class="fas fa-box-open fa-2x text-muted mb-2"></i>
+                            <p class="mb-0">No bulk food requests yet</p>
+                            <small class="text-muted">Create a new request to get started</small>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Previous</span>
+                </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+                <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                </li>
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">Next</span>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

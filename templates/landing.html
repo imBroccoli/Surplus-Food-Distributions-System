@@ -1,0 +1,408 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Welcome - Surplus Food Distribution System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-section {
+        background: linear-gradient(rgba(13, 110, 253, 0.9), rgba(0, 0, 0, 0.8)),
+        url('{% static "img/hero-bg.jpg" %}') center/cover;
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+        color: white;
+        position: relative;
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 2;
+    }
+
+    .hero-pattern {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 100px;
+        background: url('{% static "img/wave-pattern.svg" %}') repeat-x bottom;
+        opacity: 0.1;
+    }
+
+    .feature-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+        border-radius: 15px;
+        overflow: hidden;
+        background: white;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    .feature-icon {
+        font-size: 2.5rem;
+        color: #0d6efd;
+        margin-bottom: 1rem;
+        transition: transform 0.3s ease;
+    }
+
+    .feature-card:hover .feature-icon {
+        transform: scale(1.1);
+    }
+
+    .stats-section {
+        background-color: #f8f9fa;
+        padding: 6rem 0;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stats-pattern {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: url('{% static "img/dots-pattern.svg" %}') repeat;
+        opacity: 0.05;
+    }
+
+    .stat-card {
+        text-align: center;
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+        transition: transform 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stat-number {
+        font-size: 3rem;
+        font-weight: bold;
+        background: linear-gradient(45deg, #0d6efd, #0099ff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+    }
+
+    .cta-section {
+        background: linear-gradient(135deg, #0d6efd 0%, #0099ff 100%);
+        color: white;
+        padding: 4rem 0;
+        margin-top: 4rem;
+    }
+
+    .user-dashboard {
+        background-color: rgba(248, 249, 250, 0.95);
+        border-radius: 15px;
+        padding: 2rem;
+        margin-top: 2rem;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .action-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        transition: transform 0.3s ease;
+        border: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .action-card:hover {
+        transform: translateX(5px);
+    }
+
+    .btn-gradient {
+        background: linear-gradient(45deg, #0d6efd, #0099ff);
+        border: none;
+        color: white;
+    }
+
+    .btn-gradient:hover {
+        background: linear-gradient(45deg, #0099ff, #0d6efd);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if user.is_authenticated %}
+    <!-- User-specific Dashboard -->
+    <div class="container py-5">
+        <div class="user-dashboard">
+            {% if user.user_type == 'BUSINESS' %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2>Business Dashboard</h2>
+                    <p>Manage your surplus food listings and requests.</p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <div class="stat-card text-center">
+                        <i class="fas fa-plus-circle feature-icon"></i>
+                        <h4>Create Listing</h4>
+                        <p>Add new surplus food for donation</p>
+                        <a href="#" class="btn btn-primary">Create Listing</a>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="stat-card text-center">
+                        <i class="fas fa-tasks feature-icon"></i>
+                        <h4>Manage Listings</h4>
+                        <p>View and update your food listings</p>
+                        <a href="#" class="btn btn-primary">Manage Listings</a>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="stat-card text-center">
+                        <i class="fas fa-chart-bar feature-icon"></i>
+                        <h4>Business Analytics</h4>
+                        <p>Track your donation impact</p>
+                        <a href="{% url 'business_analytics' %}" class="btn btn-primary">View Analytics</a>
+                    </div>
+                </div>
+            </div>
+            {% elif user.user_type == 'NONPROFIT' %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2>Nonprofit Dashboard</h2>
+                    <p>Find and request surplus food to support your community.</p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <div class="stat-card text-center">
+                        <i class="fas fa-search feature-icon"></i>
+                        <h4>Find Food</h4>
+                        <p>Browse available surplus food listings</p>
+                        <a href="#" class="btn btn-primary">Browse Listings</a>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="stat-card text-center">
+                        <i class="fas fa-clipboard-list feature-icon"></i>
+                        <h4>My Requests</h4>
+                        <p>Track your food requests</p>
+                        <a href="#" class="btn btn-primary">View Requests</a>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="stat-card text-center">
+                        <i class="fas fa-chart-line feature-icon"></i>
+                        <h4>Impact Reports</h4>
+                        <p>View your organization's impact</p>
+                        <a href="{% url 'nonprofit_analytics' %}" class="btn btn-primary">View Reports</a>
+                    </div>
+                </div>
+            </div>
+            {% elif user.user_type == 'VOLUNTEER' %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2>Volunteer Dashboard</h2>
+                    <p>Find delivery opportunities to help in your community.</p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <div class="stat-card text-center">
+                        <i class="fas fa-search feature-icon"></i>
+                        <h4>Find Deliveries</h4>
+                        <p>Browse available delivery opportunities</p>
+                        <a href="#" class="btn btn-primary">Find Deliveries</a>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="stat-card text-center">
+                        <i class="fas fa-truck feature-icon"></i>
+                        <h4>My Deliveries</h4>
+                        <p>Manage your delivery schedule</p>
+                        <a href="#" class="btn btn-primary">View Deliveries</a>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="stat-card text-center">
+                        <i class="fas fa-medal feature-icon"></i>
+                        <h4>Impact Stats</h4>
+                        <p>See your contribution stats</p>
+                        <button class="btn btn-primary">View Stats</button>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2>Consumer Dashboard</h2>
+                    <p>Your platform for reducing food waste and supporting sustainability.</p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <div class="stat-card text-center">
+                        <i class="fas fa-map-marker-alt feature-icon"></i>
+                        <h4>Find Initiatives</h4>
+                        <p>Discover food donation initiatives near you</p>
+                        <a href="#" class="btn btn-primary">Explore</a>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="stat-card text-center">
+                        <i class="fas fa-hand-holding-heart feature-icon"></i>
+                        <h4>Volunteer</h4>
+                        <p>Support food distribution efforts</p>
+                        <a href="#" class="btn btn-primary">Learn More</a>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="stat-card text-center">
+                        <i class="fas fa-lightbulb feature-icon"></i>
+                        <h4>Sustainability Tips</h4>
+                        <p>Reduce your food waste footprint</p>
+                        <button class="btn btn-primary">View Tips</button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+{% else %}
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-pattern"></div>
+        <div class="container hero-content">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <h1 class="display-3 fw-bold mb-4">Fighting Food Waste Together</h1>
+                    <p class="lead mb-5">Join our platform to connect surplus food with those who need it most. Make a real difference in your community today.</p>
+                    <div class="d-grid gap-3 d-sm-flex">
+                        <a href="{% url 'users:register' %}" class="btn btn-gradient btn-lg px-5">Get Started</a>
+                        <a href="{% url 'users:login' %}" class="btn btn-outline-light btn-lg px-5">Sign In</a>
+                    </div>
+                </div>
+                <div class="col-lg-6 d-none d-lg-block">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="action-card">
+                                <i class="fas fa-store text-primary fa-2x mb-3"></i>
+                                <h5>For Businesses</h5>
+                                <p class="text-muted mb-0">List your surplus food items</p>
+                            </div>
+                            <div class="action-card">
+                                <i class="fas fa-hands-helping text-primary fa-2x mb-3"></i>
+                                <h5>For Nonprofits</h5>
+                                <p class="text-muted mb-0">Access food donations</p>
+                            </div>
+                        </div>
+                        <div class="col-6 pt-5">
+                            <div class="action-card">
+                                <i class="fas fa-truck text-primary fa-2x mb-3"></i>
+                                <h5>For Volunteers</h5>
+                                <p class="text-muted mb-0">Help with deliveries</p>
+                            </div>
+                            <div class="action-card">
+                                <i class="fas fa-users text-primary fa-2x mb-3"></i>
+                                <h5>Community Impact</h5>
+                                <p class="text-muted mb-0">Make a difference</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="py-5">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="display-5 fw-bold">How It Works</h2>
+                <p class="lead text-muted">Simple steps to make a big impact</p>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="feature-card h-100 p-4">
+                        <div class="feature-icon">
+                            <i class="fas fa-store"></i>
+                        </div>
+                        <h3 class="h4 mb-3">List Surplus Food</h3>
+                        <p class="text-muted mb-0">Businesses can easily list their surplus food items with details about quantity, expiration, and pickup times.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card h-100 p-4">
+                        <div class="feature-icon">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <h3 class="h4 mb-3">Find & Request</h3>
+                        <p class="text-muted mb-0">Nonprofits browse available listings and request items that match their needs and capacity.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card h-100 p-4">
+                        <div class="feature-icon">
+                            <i class="fas fa-truck"></i>
+                        </div>
+                        <h3 class="h4 mb-3">Coordinate & Deliver</h3>
+                        <p class="text-muted mb-0">Volunteers help with transportation to ensure food reaches those who need it most.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats-section">
+        <div class="stats-pattern"></div>
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="display-5 fw-bold">Our Impact</h2>
+                <p class="lead text-muted">Together we're making a difference</p>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="stat-card">
+                        <div class="stat-number" id="foodSaved">{{ total_food_weight|floatformat:0|intcomma }}+</div>
+                        <p class="text-muted mb-0">Kilos of Food Saved</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card">
+                        <div class="stat-number" id="businesses">{{ total_businesses|intcomma }}+</div>
+                        <p class="text-muted mb-0">Partner Businesses</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card">
+                        <div class="stat-number" id="deliveries">{{ total_transactions|intcomma }}+</div>
+                        <p class="text-muted mb-0">Successful Deliveries</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container text-center">
+            <h2 class="display-5 fw-bold mb-4">Join Our Mission</h2>
+            <p class="lead mb-5">Together, we can reduce food waste and fight hunger in our communities.</p>
+            <div class="d-grid gap-3 d-sm-flex justify-content-center">
+                <a href="{% url 'users:register' %}" class="btn btn-light btn-lg px-5">Get Started Today</a>
+                <a href="#" class="btn btn-outline-light btn-lg px-5">Learn More</a>
+            </div>
+        </div>
+    </section>
+{% endif %}
+{% endblock %}

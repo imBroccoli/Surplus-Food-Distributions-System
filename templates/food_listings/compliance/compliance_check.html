@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Compliance Check - {{ listing.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title mb-0">Compliance Check</h2>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h3>Listing Details</h3>
+                        <dl class="row">
+                            <dt class="col-sm-3">Title</dt>
+                            <dd class="col-sm-9">{{ listing.title }}</dd>
+
+                            <dt class="col-sm-3">Supplier</dt>
+                            <dd class="col-sm-9">{{ listing.supplier.email }}</dd>
+
+                            <dt class="col-sm-3">Type</dt>
+                            <dd class="col-sm-9">{{ listing.get_listing_type_display }}</dd>
+
+                            <dt class="col-sm-3">Quantity</dt>
+                            <dd class="col-sm-9">{{ listing.quantity }} {{ listing.unit }}</dd>
+
+                            <dt class="col-sm-3">Expiry Date</dt>
+                            <dd class="col-sm-9">{{ listing.expiry_date }}</dd>
+
+                            {% if listing.storage_requirements %}
+                            <dt class="col-sm-3">Storage</dt>
+                            <dd class="col-sm-9">{{ listing.storage_requirements }}</dd>
+                            {% endif %}
+
+                            {% if listing.handling_instructions %}
+                            <dt class="col-sm-3">Handling</dt>
+                            <dd class="col-sm-9">{{ listing.handling_instructions }}</dd>
+                            {% endif %}
+                        </dl>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% if compliance_check %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-history me-2"></i>
+                                Last checked by {{ compliance_check.checked_by.get_full_name }} on {{ compliance_check.checked_at|date:"Y-m-d H:i" }}
+                            </div>
+                        {% endif %}
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Compliance Status</label>
+                            <div class="btn-group-vertical w-100" role="group">
+                                <div class="form-check">
+                                    <input type="radio" 
+                                           name="{{ form.is_compliant.name }}" 
+                                           value="True" 
+                                           id="id_is_compliant_0"
+                                           class="form-check-input btn-check" 
+                                           {% if form.is_compliant.value == 'True' %}checked{% endif %}
+                                           required>
+                                    <label class="form-check-label btn btn-outline-success text-start w-100 mb-2" 
+                                           for="id_is_compliant_0">
+                                        <span class="me-2" style="font-size: 1.1em;">✅</span>
+                                        Mark as Compliant
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check">
+                                    <input type="radio" 
+                                           name="{{ form.is_compliant.name }}" 
+                                           value="False" 
+                                           id="id_is_compliant_1"
+                                           class="form-check-input btn-check" 
+                                           {% if form.is_compliant.value == 'False' %}checked{% endif %}
+                                           required>
+                                    <label class="form-check-label btn btn-outline-danger text-start w-100 mb-2" 
+                                           for="id_is_compliant_1">
+                                        <span class="me-2" style="font-size: 1.1em;">❌</span>
+                                        Mark as Non-Compliant
+                                    </label>
+                                </div>
+                            </div>
+                            {% if form.is_compliant.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.is_compliant.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label fw-bold">
+                                <i class="fas fa-clipboard me-2"></i>Notes
+                            </label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.notes.errors.0 }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Please provide detailed notes about the compliance check, especially if marking as non-compliant.
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'listings:compliance_list' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to List
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-clipboard-check me-2"></i>Submit Compliance Check
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            {% if listing.images.exists %}
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Listing Images</h3>
+                </div>
+                <div class="card-body">
+                    {% for image in listing.images.all %}
+                    <img src="{{ image.image.url }}" alt="Listing image" class="img-fluid mb-3 rounded">
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

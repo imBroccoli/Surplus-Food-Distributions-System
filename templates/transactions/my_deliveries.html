@@ -1,0 +1,107 @@
+{% extends 'transactions/base_transactions.html' %}
+
+{% block transaction_title %}My Deliveries{% endblock %}
+{% block transaction_subtitle %}Manage your assigned deliveries{% endblock %}
+
+{% block transaction_header_actions %}
+<div>
+    <a href="{% url 'transactions:available_deliveries' %}" class="btn btn-light">
+        <i class="fas fa-search me-2"></i>Find Deliveries
+    </a>
+</div>
+{% endblock %}
+
+{% block transaction_content %}
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Food Listing</th>
+                        <th>Pickup</th>
+                        <th>Delivery</th>
+                        <th>Weight</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for delivery in page_obj %}
+                    <tr>
+                        <td>
+                            <div>{{ delivery.transaction.request.listing.title }}</div>
+                            <small class="text-muted">
+                                From: {{ delivery.transaction.request.listing.supplier.businessprofile.company_name }}
+                            </small>
+                        </td>
+                        <td>
+                            <div>{{ delivery.pickup_window_start|date:"M d, Y H:i" }}</div>
+                            <small class="text-muted">until {{ delivery.pickup_window_end|date:"H:i" }}</small>
+                        </td>
+                        <td>
+                            <div>{{ delivery.delivery_window_start|date:"M d, Y H:i" }}</div>
+                            <small class="text-muted">until {{ delivery.delivery_window_end|date:"H:i" }}</small>
+                        </td>
+                        <td>{{ delivery.estimated_weight }} kg</td>
+                        <td>
+                            <span class="badge {% if delivery.status == 'PENDING' %}bg-warning
+                                       {% elif delivery.status == 'ASSIGNED' %}bg-info
+                                       {% elif delivery.status == 'IN_TRANSIT' %}bg-primary
+                                       {% elif delivery.status == 'DELIVERED' %}bg-success
+                                       {% elif delivery.status == 'FAILED' %}bg-danger
+                                       {% else %}bg-secondary{% endif %}">
+                                {{ delivery.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if delivery.status == 'ASSIGNED' %}
+                                <form method="post" action="{% url 'transactions:update_delivery_status' delivery.id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="status" value="IN_TRANSIT">
+                                    <button type="submit" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-truck me-1"></i>Start Delivery
+                                    </button>
+                                </form>
+                            {% elif delivery.status == 'IN_TRANSIT' %}
+                                <div class="btn-group">
+                                    <form method="post" action="{% url 'transactions:update_delivery_status' delivery.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="status" value="DELIVERED">
+                                        <button type="submit" class="btn btn-sm btn-success">
+                                            <i class="fas fa-check me-1"></i>Complete
+                                        </button>
+                                    </form>
+                                    <form method="post" action="{% url 'transactions:update_delivery_status' delivery.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="status" value="FAILED">
+                                        <button type="submit" class="btn btn-sm btn-danger">
+                                            <i class="fas fa-times me-1"></i>Failed
+                                        </button>
+                                    </form>
+                                </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <i class="fas fa-truck fa-2x text-muted mb-3"></i>
+                            <h5>No Deliveries Yet</h5>
+                            <p class="text-muted">You haven't accepted any deliveries yet.</p>
+                            <a href="{% url 'transactions:available_deliveries' %}" class="btn btn-primary">
+                                <i class="fas fa-search me-2"></i>Find Deliveries
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if page_obj.has_other_pages %}
+    {% include "transactions/includes/pagination.html" %}
+{% endif %}
+{% endblock %}

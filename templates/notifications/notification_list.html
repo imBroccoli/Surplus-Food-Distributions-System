@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+
+{% block title %}Notifications - Surplus Food Distribution System{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Notifications</h5>
+                    {% if notifications %}
+                    <a href="{% url 'notifications:mark_all_as_read' %}" class="btn btn-sm btn-outline-primary mark-all-read">
+                        <i class="fas fa-check-double me-1"></i>Mark All as Read
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="notification-list" id="notificationList">
+                        {% if notifications %}
+                            {% for notification in notifications %}
+                                <div class="notification-item {% if not notification.is_read %}unread{% endif %} p-3 border-bottom" data-id="{{ notification.id }}">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <p class="mb-1">{{ notification.message }}</p>
+                                            <small class="text-muted">{{ notification.created_at|timesince }} ago</small>
+                                        </div>
+                                        {% if not notification.is_read %}
+                                            <span class="badge bg-primary">New</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-bell-slash fa-2x text-muted mb-3"></i>
+                                <p class="text-muted mb-0">No notifications to display</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .notification-item {
+        padding: 1rem;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: background-color 0.3s ease;
+    }
+    .notification-item:last-child {
+        border-bottom: none;
+    }
+    .notification-item.unread {
+        background-color: #f8f9fa;
+    }
+    .notification-content {
+        flex: 1;
+    }
+    .notification-content p {
+        margin-bottom: 0.25rem;
+    }
+    .btn.mark-all-read:hover {
+        background-color: #0d6efd;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Update to handle multiple mark-all-read elements
+    document.querySelectorAll('.mark-all-read').forEach(markAllReadBtn => {
+        markAllReadBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Show loading state
+            sweetify.fire({
+                title: 'Processing...',
+                text: 'Marking all notifications as read',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    sweetify.showLoading();
+                }
+            });
+            fetch('{% url "notifications:mark_all_as_read" %}', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.message || 'Network response was not ok');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    // Update UI by removing unread states and badges
+                    document.querySelectorAll('.notification-item.unread').forEach(item => {
+                        item.classList.remove('unread');
+                        const badge = item.querySelector('.badge');
+                        if (badge) {
+                            badge.remove();
+                        }
+                    });
+                    // Hide the mark all read button
+                    markAllReadBtn.style.display = 'none';
+                    // Show success message
+                    sweetify.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: data.message,
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true
+                    });
+                    // Update notification count in navbar if exists
+                    const notificationCount = document.querySelector('.notification-count');
+                    if (notificationCount) {
+                        notificationCount.style.display = 'none';
+                    }
+                } else {
+                    throw new Error(data.message || 'Failed to mark notifications as read');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                sweetify.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: error.message || 'Failed to mark notifications as read',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+            });
+        });
+    });
+    // Helper function to get CSRF token from cookies
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
+</script>
+{% endblock %}

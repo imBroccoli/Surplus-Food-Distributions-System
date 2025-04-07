@@ -1,0 +1,368 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% load analytics_filters %}
+{% load static %}
+
+{% block title %}User Activity - Surplus Food Distribution{% endblock %}
+
+{% block extra_css %}
+<style>
+    .activity-dashboard {
+        background: linear-gradient(to right, #f8f9fa, #ffffff);
+    }
+    .filter-card {
+        border-radius: 15px;
+        transition: all 0.3s ease;
+    }
+    .filter-card:hover {
+        transform: translateY(-2px);
+    }
+    .stats-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.04);
+        transition: all 0.3s ease;
+    }
+    .stats-card:hover {
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.06);
+    }
+    .table-wrapper {
+        border-radius: 15px;
+        overflow: hidden;
+    }
+    .dataTables_wrapper .row {
+        margin: 1rem 0;
+        align-items: center;
+    }
+    .dataTables_filter input {
+        border-radius: 20px;
+        border: 1px solid #dee2e6;
+        padding: 0.375rem 1rem;
+        margin-left: 0.5rem;
+    }
+    .dataTables_length select {
+        border-radius: 20px;
+        border: 1px solid #dee2e6;
+        padding: 0.375rem 1rem;
+    }
+    .page-link {
+        border-radius: 20px;
+        margin: 0 2px;
+        padding: 0.5rem 1rem;
+    }
+    .badge {
+        padding: 0.5em 1em;
+        font-weight: 500;
+        letter-spacing: 0.3px;
+    }
+    .nav-button {
+        border-radius: 10px;
+        transition: all 0.3s ease;
+    }
+    .nav-button:hover {
+        transform: translateY(-2px);
+    }
+    .form-select, .form-control {
+        border-radius: 10px;
+        border: 1px solid #e0e0e0;
+        padding: 0.6rem 1rem;
+        transition: all 0.3s ease;
+    }
+    .form-select:focus, .form-control:focus {
+        box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.1);
+    }
+    #activityTable thead th {
+        background: rgba(var(--bs-primary-rgb), 0.03);
+        border-bottom: 2px solid rgba(var(--bs-primary-rgb), 0.1);
+        font-weight: 600;
+    }
+    .table-hover tbody tr:hover {
+        background-color: rgba(var(--bs-primary-rgb), 0.02);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="activity-dashboard py-4">
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="h2 fw-bold text-primary mb-2">User Activity Logs</h1>
+                <p class="text-muted mb-0"><i class="fas fa-chart-bar me-2"></i>Track and analyze user behavior across the platform</p>
+            </div>
+            <div class="d-flex gap-2">
+                {% if user.user_type == 'ADMIN' %}
+                <a href="{% url 'analytics:admin_activity' %}" class="btn btn-outline-primary nav-button">
+                    <i class="fas fa-shield-alt me-2"></i>Admin Activity
+                </a>
+                {% endif %}
+                <a href="{% url 'analytics:system_analytics' %}" class="btn btn-outline-primary nav-button">
+                    <i class="fas fa-chart-line me-2"></i>System Metrics
+                </a>
+            </div>
+        </div>
+
+        <!-- Filter Card -->
+        <div class="card filter-card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-filter me-2 text-primary"></i>Filter Activity Logs
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="activityFilterForm" method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="user_id" class="form-label fw-medium">User</label>
+                        <select class="form-select" id="user_id" name="user_id">
+                            <option value="">All Users</option>
+                            {% for user in users %}
+                            <option value="{{ user.user__id }}" {% if filter.user_id == user.user__id|stringformat:"i" %}selected{% endif %}>
+                                {{ user.user__email }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="activity_type" class="form-label fw-medium">Activity Type</label>
+                        <select class="form-select" id="activity_type" name="activity_type">
+                            <option value="">All Activities</option>
+                            {% for type in activity_types %}
+                            <option value="{{ type }}" {% if filter.activity_type == type %}selected{% endif %}>
+                                {% if type == "Other" %}
+                                    Other Activities
+                                {% else %}
+                                    {{ type }}s
+                                {% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="date_from" class="form-label fw-medium">Date From</label>
+                        <input type="date" class="form-control" id="date_from" name="date_from" value="{{ filter.date_from|default_if_none:'' }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="date_to" class="form-label fw-medium">Date To</label>
+                        <input type="date" class="form-control" id="date_to" name="date_to" value="{{ filter.date_to|default_if_none:'' }}">
+                    </div>
+                    <div class="col-12 mt-4">
+                        <button type="submit" class="btn btn-primary me-2 nav-button">
+                            <i class="fas fa-search me-2"></i>Apply Filters
+                        </button>
+                        <a href="{% url 'analytics:user_activity' %}" class="btn btn-outline-secondary nav-button">
+                            <i class="fas fa-undo me-2"></i>Reset
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Activity Log Table -->
+        <div class="card stats-card border-0">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-list-alt me-2 text-primary"></i>Activity Log
+                </h5>
+                <span class="badge bg-primary total-records">0 activities</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-wrapper">
+                    <table id="activityTable" class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Activity Type</th>
+                                <th>Timestamp</th>
+                                <th>IP Address</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Date validation setup
+    const dateFrom = document.getElementById('date_from');
+    const dateTo = document.getElementById('date_to');
+    
+    // Set max date to today for both inputs
+    const today = new Date().toISOString().split('T')[0];
+    dateFrom.max = today;
+    dateTo.max = today;
+    
+    // Validate date ranges
+    dateFrom.addEventListener('change', function() {
+        // Ensure date_to is not before date_from
+        if (dateTo.value && this.value > dateTo.value) {
+            dateTo.value = this.value;
+        }
+        dateTo.min = this.value; // Set minimum date for date_to
+    });
+    
+    dateTo.addEventListener('change', function() {
+        // If date_from is after date_to, clear date_to
+        if (dateFrom.value && this.value < dateFrom.value) {
+            this.value = dateFrom.value;
+        }
+    });
+
+    // Initialize DataTable with enhanced styling
+    const table = $('#activityTable').DataTable({
+        processing: true,
+        serverSide: true,
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>><"row"<"col-sm-12"Bt>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        buttons: [
+            {
+                extend: 'pdf',
+                text: '<i class="fas fa-file-pdf me-2"></i>Export PDF',
+                className: 'btn btn-danger btn-sm me-2',
+                title: 'User Activity Log',
+                exportOptions: {
+                    columns: [0, 1, 2, 3, 4]
+                }
+            },
+            {
+                extend: 'excel',
+                text: '<i class="fas fa-file-excel me-2"></i>Export Excel',
+                className: 'btn btn-success btn-sm me-2',
+                title: 'User Activity Log',
+                exportOptions: {
+                    columns: [0, 1, 2, 3, 4]
+                }
+            },
+            {
+                extend: 'csv',
+                text: '<i class="fas fa-file-csv me-2"></i>Export CSV',
+                className: 'btn btn-primary btn-sm me-2',
+                title: 'User Activity Log',
+                exportOptions: {
+                    columns: [0, 1, 2, 3, 4]
+                }
+            }
+        ],
+        ajax: {
+            url: window.location.pathname,
+            data: function(d) {
+                d.user_id = $('#user_id').val();
+                d.activity_type = $('#activity_type').val();
+                d.date_from = $('#date_from').val();
+                d.date_to = $('#date_to').val();
+            }
+        },
+        columns: [
+            { 
+                data: 'user',
+                render: function(data) {
+                    return `<div class="d-flex align-items-center">
+                                <div class="rounded-circle bg-light p-2 me-2">
+                                    <i class="fas fa-user text-primary"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-medium">${data.email}</div>
+                                    <small class="text-muted">${data.type}</small>
+                                </div>
+                            </div>`;
+                }
+            },
+            { 
+                data: 'activity_type',
+                render: function(data) {
+                    let badgeClass = 'bg-secondary';
+                    let icon = 'fa-circle';
+                    
+                    if (data.includes('VIEW')) {
+                        badgeClass = 'bg-info';
+                        icon = 'fa-eye';
+                    }
+                    else if (data.includes('CREATE')) {
+                        badgeClass = 'bg-success';
+                        icon = 'fa-plus-circle';
+                    }
+                    else if (data.includes('UPDATE')) {
+                        badgeClass = 'bg-warning';
+                        icon = 'fa-edit';
+                    }
+                    else if (data.includes('DELETE')) {
+                        badgeClass = 'bg-danger';
+                        icon = 'fa-trash';
+                    }
+                    else if (data.includes('LOGIN')) {
+                        badgeClass = 'bg-primary';
+                        icon = 'fa-sign-in-alt';
+                    }
+                    
+                    return `<span class="badge ${badgeClass}">
+                                <i class="fas ${icon} me-1"></i>
+                                ${data.replace(/_/g, ' ').toLowerCase()
+                                    .replace(/\b\w/g, l => l.toUpperCase())}
+                            </span>`;
+                }
+            },
+            { 
+                data: 'timestamp',
+                render: function(data) {
+                    const date = new Date(data);
+                    return `<div class="d-flex align-items-center">
+                                <i class="far fa-clock text-muted me-2"></i>
+                                <span>${date.toLocaleString()}</span>
+                            </div>`;
+                }
+            },
+            { 
+                data: 'ip_address',
+                render: function(data) {
+                    return `<div class="d-flex align-items-center">
+                                <i class="fas fa-network-wired text-muted me-2"></i>
+                                <code class="small">${data}</code>
+                            </div>`;
+                }
+            },
+            { 
+                data: 'details',
+                render: function(data) {
+                    return `<div class="text-muted small">
+                                <i class="fas fa-info-circle me-2"></i>${data}
+                            </div>`;
+                }
+            }
+        ],
+        order: [[2, 'desc']],
+        pageLength: 15,
+        language: {
+            processing: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>',
+            emptyTable: '<div class="text-muted text-center py-4"><i class="fas fa-info-circle me-2"></i>No activity logs found</div>',
+            lengthMenu: '<span class="text-muted me-2">Show</span> _MENU_ <span class="text-muted ms-2">entries</span>',
+            info: 'Showing _START_ to _END_ of _TOTAL_ activities',
+            paginate: {
+                first: '<i class="fas fa-angle-double-left"></i>',
+                last: '<i class="fas fa-angle-double-right"></i>',
+                next: '<i class="fas fa-angle-right"></i>',
+                previous: '<i class="fas fa-angle-left"></i>'
+            }
+        },
+        drawCallback: function(settings) {
+            $('.total-records').text(settings._iRecordsTotal + ' activities');
+            
+            // Enhanced hover effects for table rows
+            $('#activityTable tbody tr').hover(
+                function() { $(this).addClass('shadow-sm'); },
+                function() { $(this).removeClass('shadow-sm'); }
+            );
+        }
+    });
+
+    // Re-fetch data when filters change
+    $('#user_id, #activity_type, #date_from, #date_to').on('change', function() {
+        table.ajax.reload();
+    });
+});
+</script>
+{% endblock %}

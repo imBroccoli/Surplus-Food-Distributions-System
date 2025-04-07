@@ -1,0 +1,295 @@
+{% load humanize %}
+
+<!-- User Activity Charts -->
+<div class="row g-4 mb-4">
+    <!-- Active Users Chart -->
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent">
+                <h5 class="card-title mb-0">Active Users Trend</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="activeUsersChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- User Growth Chart -->
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent">
+                <h5 class="card-title mb-0">User Growth Analysis</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="userGrowthChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Activity Distribution Charts -->
+<div class="row g-4 mb-4">
+    <!-- Activity by Type Chart -->
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent">
+                <h5 class="card-title mb-0">Activity Distribution by Type</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="activityTypeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Daily Activity Pattern Chart -->
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent">
+                <h5 class="card-title mb-0">Daily Activity Pattern</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="dailyPatternChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- User Categories -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent">
+        <h5 class="card-title mb-0">User Categories & Engagement</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-4">
+            {% for category in report.data.user_categories %}
+            <div class="col-sm-6 col-lg-3">
+                <div class="p-3 rounded bg-light">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <div class="rounded-circle p-2 bg-{{ category.color }} bg-opacity-10">
+                                    <i class="fas fa-{{ category.icon }} fa-fw text-{{ category.color }}"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-0">{{ category.name }}</h6>
+                            </div>
+                        </div>
+                        <span class="badge bg-{{ category.color }}">{{ category.count|intcomma }}</span>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-{{ category.color }}" style="width: {{ category.percentage }}%"></div>
+                    </div>
+                    <small class="text-muted d-block mt-2">
+                        Avg. {{ category.avg_actions }} actions/user
+                    </small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Activity Log -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="card-title mb-0">Recent Activity Log</h5>
+            </div>
+            <div class="col-auto">
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-download me-2"></i>Export
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'analytics:export_report' report.id 'pdf' %}">
+                            <i class="fas fa-file-pdf me-2"></i>Export as PDF
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'analytics:export_report' report.id 'csv' %}">
+                            <i class="fas fa-file-csv me-2"></i>Export as CSV
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'analytics:export_report' report.id 'excel' %}">
+                            <i class="fas fa-file-excel me-2"></i>Export as Excel
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>User</th>
+                        <th>Activity</th>
+                        <th>Type</th>
+                        <th>Timestamp</th>
+                        <th>Device</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for activity in report.data.activity_log %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {% if activity.user.avatar %}
+                                <img src="{{ activity.user.avatar }}" 
+                                     class="rounded-circle me-2"
+                                     width="32" height="32"
+                                     alt="{{ activity.user.name }}">
+                                {% else %}
+                                <div class="rounded-circle bg-{{ activity.user.color }} bg-opacity-10 
+                                            d-flex align-items-center justify-content-center me-2"
+                                     style="width: 32px; height: 32px;">
+                                    <i class="fas fa-user fa-sm text-{{ activity.user.color }}"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <div class="small fw-medium">{{ activity.user.name }}</div>
+                                    <small class="text-muted">{{ activity.user.role }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-truncate" style="max-width: 200px;">
+                                {{ activity.description }}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ activity.type_color }}">{{ activity.type }}</span>
+                        </td>
+                        <td>
+                            <div class="small">{{ activity.timestamp|date:"Y-m-d H:i" }}</div>
+                            <small class="text-muted">{{ activity.timestamp|naturaltime }}</small>
+                        </td>
+                        <td>
+                            <i class="fas fa-{{ activity.device_icon }} fa-fw me-1"></i>
+                            {{ activity.device }}
+                        </td>
+                        <td>{{ activity.location }}</td>
+                        <td>
+                            <span class="badge bg-{{ activity.status_color }}">{{ activity.status }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js Initialization -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Active Users Chart
+    const activeUsersCtx = document.getElementById('activeUsersChart').getContext('2d');
+    new Chart(activeUsersCtx, {
+        type: 'line',
+        data: {
+            labels: {{ report.data.charts.active_users.labels|safe }},
+            datasets: [{
+                label: 'Active Users',
+                data: {{ report.data.charts.active_users.data|safe }},
+                borderColor: '#0d6efd',
+                tension: 0.4,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+
+    // User Growth Chart
+    const growthCtx = document.getElementById('userGrowthChart').getContext('2d');
+    new Chart(growthCtx, {
+        type: 'line',
+        data: {
+            labels: {{ report.data.charts.growth.labels|safe }},
+            datasets: [{
+                label: 'New Users',
+                data: {{ report.data.charts.growth.new_users|safe }},
+                borderColor: '#198754',
+                tension: 0.4,
+                fill: false
+            }, {
+                label: 'Cumulative Users',
+                data: {{ report.data.charts.growth.total_users|safe }},
+                borderColor: '#0dcaf0',
+                tension: 0.4,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            }
+        }
+    });
+
+    // Activity Type Chart
+    const typeCtx = document.getElementById('activityTypeChart').getContext('2d');
+    new Chart(typeCtx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ report.data.charts.activity_types.labels|safe }},
+            datasets: [{
+                data: {{ report.data.charts.activity_types.data|safe }},
+                backgroundColor: {{ report.data.charts.activity_types.colors|safe }}
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right'
+                }
+            }
+        }
+    });
+
+    // Daily Pattern Chart
+    const patternCtx = document.getElementById('dailyPatternChart').getContext('2d');
+    new Chart(patternCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ report.data.charts.daily_pattern.labels|safe }},
+            datasets: [{
+                label: 'Activity Count',
+                data: {{ report.data.charts.daily_pattern.data|safe }},
+                backgroundColor: '#0d6efd'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+});
+</script>

@@ -1,0 +1,227 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Food Listings Management - Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2">Food Listings Management</h1>
+            <p class="text-muted">Monitor and manage food listings across the platform</p>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'listings:compliance_list' %}" class="btn btn-primary">
+                <i class="fas fa-clipboard-check me-2"></i>Compliance Checks
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent">
+            <h5 class="card-title mb-0">Filter Listings</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="type" class="form-label">Listing Type</label>
+                    <select class="form-select" id="type" name="type">
+                        <option value="">All Types</option>
+                        <option value="COMMERCIAL" {% if current_type == 'COMMERCIAL' %}selected{% endif %}>Commercial</option>
+                        <option value="DONATION" {% if current_type == 'DONATION' %}selected{% endif %}>Donation</option>
+                        <option value="NONPROFIT_ONLY" {% if current_type == 'NONPROFIT_ONLY' %}selected{% endif %}>Nonprofit Only</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="status" class="form-label">Status</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="">All Status</option>
+                        <option value="DRAFT" {% if current_status == 'DRAFT' %}selected{% endif %}>Draft</option>
+                        <option value="ACTIVE" {% if current_status == 'ACTIVE' %}selected{% endif %}>Active</option>
+                        <option value="RESERVED" {% if current_status == 'RESERVED' %}selected{% endif %}>Reserved</option>
+                        <option value="COMPLETED" {% if current_status == 'COMPLETED' %}selected{% endif %}>Completed</option>
+                        <option value="EXPIRED" {% if current_status == 'EXPIRED' %}selected{% endif %}>Expired</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="compliance" class="form-label">Compliance</label>
+                    <select class="form-select" id="compliance" name="compliance">
+                        <option value="">All Compliance</option>
+                        <option value="compliant" {% if current_compliance == 'compliant' %}selected{% endif %}>Compliant</option>
+                        <option value="non_compliant" {% if current_compliance == 'non_compliant' %}selected{% endif %}>Non-Compliant</option>
+                        <option value="pending" {% if current_compliance == 'pending' %}selected{% endif %}>Pending Check</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <div class="d-grid gap-2 d-md-flex w-100">
+                        <button type="submit" class="btn btn-primary flex-fill">
+                            <i class="fas fa-filter me-2"></i>Apply Filters
+                        </button>
+                        <a href="?" class="btn btn-outline-secondary flex-fill">
+                            <i class="fas fa-undo me-2"></i>Reset
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Listings Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Food Listings</h5>
+            <span class="badge bg-secondary">{{ listings|length }} listings</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Listing</th>
+                            <th>Supplier</th>
+                            <th>Type</th>
+                            <th>Quantity</th>
+                            <th>Status</th>
+                            <th>Expiry</th>
+                            <th>Compliance</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for listing in listings %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    {% if listing.images.exists %}
+                                    <img src="{{ listing.images.first.image.url }}" class="rounded me-2" width="48" height="48" alt="">
+                                    {% else %}
+                                    <div class="rounded bg-light d-flex align-items-center justify-content-center me-2" style="width: 48px; height: 48px;">
+                                        <i class="fas fa-box fa-lg text-muted"></i>
+                                    </div>
+                                    {% endif %}
+                                    <div>
+                                        <div class="fw-medium">{{ listing.title }}</div>
+                                        <small class="text-muted">Created {{ listing.created_at|naturaltime }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                        <i class="fas fa-building fa-sm text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <div class="small">{{ listing.supplier.businessprofile.company_name }}</div>
+                                        <small class="text-muted">{{ listing.supplier.email }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if listing.listing_type == 'COMMERCIAL' %}primary{% elif listing.listing_type == 'DONATION' %}success{% else %}info{% endif %}">
+                                    {{ listing.get_listing_type_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="small">{{ listing.quantity }} {{ listing.unit }}</div>
+                                {% if listing.price %}
+                                <small class="text-muted">${{ listing.price }}</small>
+                                {% else %}
+                                <small class="text-success">Free</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if listing.status == 'ACTIVE' %}success
+                                    {% elif listing.status == 'DRAFT' %}warning
+                                    {% elif listing.status == 'RESERVED' %}info
+                                    {% elif listing.status == 'COMPLETED' %}primary
+                                    {% else %}secondary{% endif %}">
+                                    {{ listing.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="small">{{ listing.expiry_date|date:"Y-m-d" }}</div>
+                                <small class="text-muted">{{ listing.expiry_date|naturaltime }}</small>
+                            </td>
+                            <td>
+                                {% if listing.compliance_check %}
+                                    {% if listing.compliance_check.is_compliant %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check me-1"></i>Compliant
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-times me-1"></i>Non-Compliant
+                                    </span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-clock me-1"></i>Pending
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{% url 'listings:detail' listing.pk %}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'listings:compliance_check' listing.pk %}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-clipboard-check"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete({{ listing.pk }})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-4">
+                                <div class="text-muted">
+                                    <i class="fas fa-box-open me-2"></i>No listings found
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this listing? This action cannot be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmDelete(listingId) {
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    const form = document.getElementById('deleteForm');
+    form.action = `/listings/${listingId}/delete/`;
+    modal.show();
+}
+</script>
+{% endblock %}

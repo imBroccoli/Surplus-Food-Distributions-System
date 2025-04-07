@@ -1,0 +1,304 @@
+{% load humanize %}
+
+<!-- Performance Charts -->
+<div class="row g-4 mb-4">
+    <!-- Server Performance Chart -->
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent">
+                <h5 class="card-title mb-0">Server Performance Trends</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="serverPerformanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Response Time Chart -->
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent">
+                <h5 class="card-title mb-0">Response Time Analysis</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="responseTimeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Resource Usage Charts -->
+<div class="row g-4 mb-4">
+    <!-- CPU & Memory Chart -->
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent">
+                <h5 class="card-title mb-0">CPU & Memory Usage</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="resourceUsageChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Network Traffic Chart -->
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent">
+                <h5 class="card-title mb-0">Network Traffic</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="networkTrafficChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Metrics Table -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="card-title mb-0">Detailed System Metrics</h5>
+            </div>
+            <div class="col-auto">
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-download me-2"></i>Export
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'analytics:export_report' report.id 'pdf' %}">
+                            <i class="fas fa-file-pdf me-2"></i>Export as PDF
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'analytics:export_report' report.id 'csv' %}">
+                            <i class="fas fa-file-csv me-2"></i>Export as CSV
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'analytics:export_report' report.id 'excel' %}">
+                            <i class="fas fa-file-excel me-2"></i>Export as Excel
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Metric</th>
+                        <th>Current</th>
+                        <th>Average</th>
+                        <th>Peak</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for metric in report.data.detailed_metrics %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-{{ metric.icon }} fa-fw me-2 text-{{ metric.color }}"></i>
+                                {{ metric.name }}
+                            </div>
+                        </td>
+                        <td>{{ metric.current_value }}</td>
+                        <td>{{ metric.average_value }}</td>
+                        <td>{{ metric.peak_value }}</td>
+                        <td>
+                            <span class="badge bg-{{ metric.status_color }}">{{ metric.status }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Error Logs -->
+{% if report.data.error_logs %}
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="card-title mb-0">Recent Error Logs</h5>
+            </div>
+            <div class="col-auto">
+                <button type="button" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-sync-alt me-2"></i>Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Error Type</th>
+                        <th>Message</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in report.data.error_logs %}
+                    <tr>
+                        <td>{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
+                        <td>
+                            <span class="badge bg-{{ log.severity_color }}">{{ log.type }}</span>
+                        </td>
+                        <td>
+                            <div class="text-truncate" style="max-width: 300px;">
+                                {{ log.message }}
+                            </div>
+                        </td>
+                        <td>{{ log.location }}</td>
+                        <td>
+                            <span class="badge bg-{{ log.status_color }}">{{ log.status }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Chart.js Initialization -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Server Performance Chart
+    const serverPerfCtx = document.getElementById('serverPerformanceChart').getContext('2d');
+    new Chart(serverPerfCtx, {
+        type: 'line',
+        data: {
+            labels: {{ report.data.charts.performance.labels|safe }},
+            datasets: [{
+                label: 'Server Score',
+                data: {{ report.data.charts.performance.data|safe }},
+                borderColor: '#0d6efd',
+                tension: 0.4,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+
+    // Response Time Chart
+    const responseTimeCtx = document.getElementById('responseTimeChart').getContext('2d');
+    new Chart(responseTimeCtx, {
+        type: 'line',
+        data: {
+            labels: {{ report.data.charts.response_time.labels|safe }},
+            datasets: [{
+                label: 'Response Time (ms)',
+                data: {{ report.data.charts.response_time.data|safe }},
+                borderColor: '#198754',
+                tension: 0.4,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+
+    // Resource Usage Chart
+    const resourceCtx = document.getElementById('resourceUsageChart').getContext('2d');
+    new Chart(resourceCtx, {
+        type: 'line',
+        data: {
+            labels: {{ report.data.charts.resources.labels|safe }},
+            datasets: [{
+                label: 'CPU Usage %',
+                data: {{ report.data.charts.resources.cpu|safe }},
+                borderColor: '#0d6efd',
+                tension: 0.4,
+                fill: false
+            }, {
+                label: 'Memory Usage %',
+                data: {{ report.data.charts.resources.memory|safe }},
+                borderColor: '#198754',
+                tension: 0.4,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+
+    // Network Traffic Chart
+    const networkCtx = document.getElementById('networkTrafficChart').getContext('2d');
+    new Chart(networkCtx, {
+        type: 'line',
+        data: {
+            labels: {{ report.data.charts.network.labels|safe }},
+            datasets: [{
+                label: 'Inbound (MB/s)',
+                data: {{ report.data.charts.network.inbound|safe }},
+                borderColor: '#0d6efd',
+                tension: 0.4,
+                fill: false
+            }, {
+                label: 'Outbound (MB/s)',
+                data: {{ report.data.charts.network.outbound|safe }},
+                borderColor: '#dc3545',
+                tension: 0.4,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            }
+        }
+    });
+});
+</script>

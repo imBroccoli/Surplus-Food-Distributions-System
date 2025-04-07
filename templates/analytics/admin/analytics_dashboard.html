@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Analytics Management - Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2">Analytics Management</h1>
+            <p class="text-muted">Comprehensive view of platform analytics and metrics</p>
+        </div>
+        <div class="btn-group">
+            <a href="{% url 'analytics:reports_dashboard' %}" class="btn btn-primary">
+                <i class="fas fa-file-alt me-2"></i>Reports
+            </a>
+            <a href="{% url 'analytics:generate_report' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Generate Report
+            </a>
+        </div>
+    </div>
+
+    <!-- Analytics Overview -->
+    <div class="row g-4 mb-4">
+        <!-- Impact Summary -->
+        <div class="col-12 col-xl-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Recent Impact Metrics</h5>
+                        <a href="{% url 'analytics:impact_dashboard' %}" class="btn btn-sm btn-outline-primary">
+                            View Details
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Food Saved</th>
+                                    <th>CO2 Saved</th>
+                                    <th>Meals</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for metric in impact_metrics %}
+                                <tr>
+                                    <td>{{ metric.date|date:"Y-m-d" }}</td>
+                                    <td>{{ metric.food_redistributed_kg|floatformat:1|intcomma }} kg</td>
+                                    <td>{{ metric.co2_emissions_saved|floatformat:1|intcomma }} kg</td>
+                                    <td>{{ metric.meals_provided|intcomma }}</td>
+                                    <td>${{ metric.monetary_value_saved|floatformat:2|intcomma }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Performance -->
+        <div class="col-12 col-xl-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">System Performance</h5>
+                        <a href="{% url 'analytics:system_analytics' %}" class="btn btn-sm btn-outline-primary">
+                            View Details
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Active Users</th>
+                                    <th>New Listings</th>
+                                    <th>Requests</th>
+                                    <th>Completion Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for metric in system_metrics %}
+                                <tr>
+                                    <td>{{ metric.date|date:"Y-m-d" }}</td>
+                                    <td>{{ metric.active_users|intcomma }}</td>
+                                    <td>{{ metric.new_listings_count|intcomma }}</td>
+                                    <td>{{ metric.request_count|intcomma }}</td>
+                                    <td>{{ metric.transaction_completion_rate|floatformat:1 }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Activity & Top Listings -->
+    <div class="row g-4">
+        <!-- User Activity -->
+        <div class="col-12 col-xl-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">User Activity Breakdown</h5>
+                        <a href="{% url 'analytics:user_activity' %}" class="btn btn-sm btn-outline-primary">
+                            View Activity Log
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        {% for type in user_breakdown %}
+                        <div class="col-sm-6">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span>{{ type.user__user_type|title }}</span>
+                                <span class="badge bg-primary">{{ type.count|intcomma }}</span>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar" style="width: {% widthratio type.count user_breakdown.0.count 100 %}%"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Active Listings -->
+        <div class="col-12 col-xl-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Top Active Listings</h5>
+                        <a href="{% url 'listings:admin_listings_list' %}" class="btn btn-sm btn-outline-primary">
+                            View All Listings
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Listing</th>
+                                    <th>Supplier</th>
+                                    <th>Requests</th>
+                                    <th>Food Saved</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for listing in top_listings %}
+                                <tr>
+                                    <td>{{ listing.listing__title }}</td>
+                                    <td>{{ listing.listing__supplier__email }}</td>
+                                    <td>{{ listing.total_requests|intcomma }}</td>
+                                    <td>{{ listing.total_food_saved|floatformat:1|intcomma }} kg</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

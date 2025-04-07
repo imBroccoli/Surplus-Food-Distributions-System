@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Create User - Admin Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+.hidden {
+    display: none;
+}
+.form-check {
+    padding-left: 1.5rem;
+}
+.form-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: none;
+    margin-bottom: 2rem;
+}
+.card-body {
+    padding: 2rem;
+}
+.section-title {
+    color: #0d6efd;
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e9ecef;
+}
+.form-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.btn-toolbar {
+    margin-top: 2rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="form-container">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="h2 mb-1">Create User</h1>
+                <p class="text-muted mb-0">Add a new user to the system</p>
+            </div>
+            <div>
+                <a href="{% url 'users:admin_users_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Users
+                </a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <form method="post" class="needs-validation" id="createUserForm" novalidate enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- Main User Form -->
+                    <div class="form-section">
+                        <h4 class="section-title">Basic Information</h4>
+                        {% crispy form %}
+                    </div>
+
+                    <!-- Dynamic Profile Forms -->
+                    <div id="business-form" class="form-section hidden">
+                        <h4 class="section-title">Business Information</h4>
+                        {% crispy business_form %}
+                    </div>
+
+                    <div id="nonprofit-form" class="form-section hidden">
+                        <h4 class="section-title">Organization Information</h4>
+                        {% crispy nonprofit_form %}
+                    </div>
+
+                    <div id="volunteer-form" class="form-section hidden">
+                        <h4 class="section-title">Volunteer Information</h4>
+                        {% crispy volunteer_form %}
+                    </div>
+
+                    <div id="admin-form" class="form-section hidden">
+                        <h4 class="section-title">Administrative Information</h4>
+                        {% crispy admin_form %}
+                    </div>
+
+                    <div class="btn-toolbar justify-content-end">
+                        <button type="button" class="btn btn-outline-secondary me-2" onclick="window.history.back();">
+                            <i class="fas fa-times me-1"></i>Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-user-plus me-1"></i>Create User
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Messages are now handled by the sweetify tag in base.html template
+    
+    const form = document.querySelector('#createUserForm');
+    const userTypeSelect = document.querySelector('#id_user_type');
+    const profileForms = {
+        'BUSINESS': document.querySelector('#business-form'),
+        'NONPROFIT': document.querySelector('#nonprofit-form'),
+        'VOLUNTEER': document.querySelector('#volunteer-form'),
+        'ADMIN': document.querySelector('#admin-form')
+    };
+
+    function showProfileForm(userType) {
+        // First hide and disable all forms
+        Object.values(profileForms).forEach(form => {
+            if (form) {
+                form.classList.add('hidden');
+                form.querySelectorAll('input, select, textarea').forEach(input => {
+                    input.disabled = true;
+                    input.required = false; // Remove required attribute when hidden
+                });
+            }
+        });
+
+        // Show and enable the selected form
+        const selectedForm = profileForms[userType];
+        if (selectedForm) {
+            selectedForm.classList.remove('hidden');
+            selectedForm.querySelectorAll('input, select, textarea').forEach(input => {
+                input.disabled = false;
+                // Restore required attribute based on data-required
+                if (input.hasAttribute('data-required')) {
+                    input.required = true;
+                }
+            });
+        }
+    }
+
+    userTypeSelect?.addEventListener('change', function() {
+        showProfileForm(this.value);
+    });
+
+    // Show initial form if user type is pre-selected
+    if (userTypeSelect?.value) {
+        showProfileForm(userTypeSelect.value);
+    }
+
+    // Form validation
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Find first invalid field
+            const firstInvalid = form.querySelector(':invalid');
+            if (firstInvalid) {
+                firstInvalid.focus();
+                firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                sweetify.fire({
+                    icon: 'error',
+                    title: 'Validation Error',
+                    text: 'Please check the form for errors and try again.',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+            }
+        } else {
+            // Show loading state
+            sweetify.fire({
+                title: 'Creating User',
+                text: 'Please wait while we create the user account...',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    sweetify.showLoading();
+                }
+            });
+        }
+        form.classList.add('was-validated');
+    });
+});
+</script>
+{% endblock %}

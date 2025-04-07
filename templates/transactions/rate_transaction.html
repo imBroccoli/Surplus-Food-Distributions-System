@@ -1,0 +1,145 @@
+{% extends 'transactions/base_transactions.html' %}
+
+{% block transaction_title %}Rate Transaction{% endblock %}
+{% block transaction_subtitle %}Rate your experience with this transaction{% endblock %}
+
+{% block transaction_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="mb-4">
+                    <h4>Transaction Details</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Listing:</strong> {{ transaction.request.listing.title }}</p>
+                            <p><strong>Quantity:</strong> {{ transaction.request.quantity_requested }} {{ transaction.request.listing.unit }}</p>
+                            <p><strong>Date:</strong> {{ transaction.transaction_date|date:"F j, Y" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            {% if user == transaction.request.requester %}
+                                <p><strong>Supplier:</strong> {{ transaction.request.listing.supplier.businessprofile.company_name }}</p>
+                            {% else %}
+                                <p><strong>Requester:</strong> {{ transaction.request.requester.get_full_name }}</p>
+                            {% endif %}
+                            <p><strong>Status:</strong> {{ transaction.get_status_display }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <h4 class="mb-3">Submit Rating</h4>
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Rating</label>
+                        <div class="rating-stars mb-2">
+                            {% for i in "12345"|make_list reversed %}
+                            <input type="radio" name="rating" value="{{ i }}" id="star{{ i }}" required>
+                            <label for="star{{ i }}"><i class="far fa-star"></i></label>
+                            {% endfor %}
+                        </div>
+                        {% if messages %}
+                        {% for message in messages %}
+                        {% if 'required' in message|lower %}
+                        <div class="invalid-feedback d-block">
+                            {{ message }}
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Comment (optional)</label>
+                        <textarea name="comment" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-2"></i>Submit Rating
+                        </button>
+                        {% if user == transaction.request.requester %}
+                            <a href="{% url 'transactions:requests' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Requests
+                            </a>
+                        {% else %}
+                            <a href="{% url 'transactions:my_transactions' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Transactions
+                            </a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .rating-stars {
+        display: flex;
+        flex-direction: row-reverse;
+        justify-content: flex-end;
+    }
+    .rating-stars input {
+        display: none;
+    }
+    .rating-stars label {
+        cursor: pointer;
+        font-size: 1.5rem;
+        padding: 0 0.2em;
+        color: #ddd;
+    }
+    .rating-stars input:checked ~ label i,
+    .rating-stars label:hover i,
+    .rating-stars label:hover ~ label i {
+        content: "\f005";
+        font-family: "Font Awesome 5 Free";
+        font-weight: 900;
+        color: #ffc107;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const stars = document.querySelectorAll('.rating-stars label');
+    
+    stars.forEach(star => {
+        star.addEventListener('mouseover', function() {
+            const icon = this.querySelector('i');
+            icon.classList.remove('far');
+            icon.classList.add('fas');
+        });
+        
+        star.addEventListener('mouseout', function() {
+            if (!this.previousElementSibling.checked) {
+                const icon = this.querySelector('i');
+                icon.classList.remove('fas');
+                icon.classList.add('far');
+            }
+        });
+        
+        star.addEventListener('click', function() {
+            stars.forEach(s => {
+                const icon = s.querySelector('i');
+                icon.classList.remove('fas');
+                icon.classList.add('far');
+            });
+            
+            let current = this;
+            while (current) {
+                const icon = current.querySelector('i');
+                icon.classList.remove('far');
+                icon.classList.add('fas');
+                current = current.nextElementSibling;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

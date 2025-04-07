@@ -1,0 +1,313 @@
+{% extends 'transactions/base_transactions.html' %}
+{% load rating_filters %}
+
+{% block transaction_title %}Transaction Detail{% endblock %}
+{% block transaction_subtitle %}View detailed information about this transaction{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .rating-stars {
+        color: #ffc107;
+        font-size: 1rem;
+    }
+    .rating-card {
+        border-left: 4px solid #0d6efd;
+    }
+    .transaction-timeline {
+        position: relative;
+    }
+    .timeline-item {
+        padding-left: 30px;
+        position: relative;
+        padding-bottom: 20px;
+    }
+    .timeline-item:before {
+        content: '';
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        background: #0d6efd;
+        position: absolute;
+        left: 0;
+        top: 4px;
+    }
+    .timeline-item:after {
+        content: '';
+        width: 2px;
+        background: #dee2e6;
+        position: absolute;
+        left: 7px;
+        top: 20px;
+        bottom: 0;
+    }
+    .timeline-item:last-child:after {
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block transaction_content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Transaction #{{ transaction.id }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6>Food Listing</h6>
+                        <p class="mb-1">
+                            <strong>{{ transaction.request.listing.title }}</strong>
+                        </p>
+                        <p class="text-muted mb-0">
+                            {{ transaction.request.listing.description|truncatechars:100 }}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Transaction Details</h6>
+                        <p class="mb-1">
+                            <small class="text-muted">Status:</small>
+                            <span class="badge {% if transaction.status == 'PENDING' %}bg-warning
+                                        {% elif transaction.status == 'IN_PROGRESS' %}bg-info
+                                        {% elif transaction.status == 'COMPLETED' %}bg-success
+                                        {% else %}bg-secondary{% endif %}">
+                                {{ transaction.get_status_display }}
+                            </span>
+                        </p>
+                        <p class="mb-1">
+                            <small class="text-muted">Date:</small>
+                            {{ transaction.transaction_date|date:"F j, Y H:i" }}
+                        </p>
+                        <p class="mb-1">
+                            <small class="text-muted">Pickup Date:</small>
+                            {{ transaction.request.pickup_date|date:"M j, Y" }}
+                        </p>
+                        <p class="mb-1">
+                            <small class="text-muted">Quantity:</small>
+                            {{ transaction.request.quantity_requested }} {{ transaction.request.listing.unit }}
+                        </p>
+                        {% if transaction.completion_date %}
+                        <p class="mb-0">
+                            <small class="text-muted">Completed on:</small>
+                            {{ transaction.completion_date|date:"F j, Y H:i" }}
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Supplier</h6>
+                        <p class="mb-1">
+                            <strong>
+                                {% if transaction.request.listing.supplier.user_type == 'BUSINESS' %}
+                                    {{ transaction.request.listing.supplier.businessprofile.company_name }}
+                                {% else %}
+                                    {{ transaction.request.listing.supplier.get_full_name }}
+                                {% endif %}
+                            </strong>
+                        </p>
+                        <p class="mb-0">
+                            <small class="text-muted">Email:</small>
+                            {{ transaction.request.listing.supplier.email }}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Recipient</h6>
+                        <p class="mb-1">
+                            <strong>
+                                {% if transaction.request.requester.user_type == 'NONPROFIT' %}
+                                    {{ transaction.request.requester.nonprofitprofile.organization_name }}
+                                {% else %}
+                                    {{ transaction.request.requester.get_full_name }}
+                                {% endif %}
+                            </strong>
+                        </p>
+                        <p class="mb-0">
+                            <small class="text-muted">Email:</small>
+                            {{ transaction.request.requester.email }}
+                        </p>
+                    </div>
+                </div>
+
+                {% if transaction.request.notes %}
+                <hr class="my-4">
+                <h6>Notes</h6>
+                <p>{{ transaction.request.notes }}</p>
+                {% endif %}
+
+                {% if transaction.delivery %}
+                <hr class="my-4">
+                <h6>Delivery Information</h6>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1">
+                            <small class="text-muted">Status:</small>
+                            <span class="badge {% if transaction.delivery.status == 'PENDING' %}bg-warning
+                                        {% elif transaction.delivery.status == 'ASSIGNED' %}bg-primary
+                                        {% elif transaction.delivery.status == 'IN_TRANSIT' %}bg-info
+                                        {% elif transaction.delivery.status == 'DELIVERED' %}bg-success
+                                        {% else %}bg-secondary{% endif %}">
+                                {{ transaction.delivery.get_status_display }}
+                            </span>
+                        </p>
+                        {% if transaction.delivery.volunteer %}
+                        <p class="mb-1">
+                            <small class="text-muted">Volunteer:</small>
+                            {{ transaction.delivery.volunteer.get_full_name }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1">
+                            <small class="text-muted">Pickup Window:</small>
+                            {{ transaction.delivery.pickup_window_start|date:"F j, H:i" }} - 
+                            {{ transaction.delivery.pickup_window_end|date:"H:i" }}
+                        </p>
+                        <p class="mb-0">
+                            <small class="text-muted">Delivery Window:</small>
+                            {{ transaction.delivery.delivery_window_start|date:"F j, H:i" }} - 
+                            {{ transaction.delivery.delivery_window_end|date:"H:i" }}
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Rating Section -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Ratings</h5>
+            </div>
+            <div class="card-body">
+                {% with transaction_ratings=transaction.ratings.all %}
+                    {% if transaction_ratings %}
+                        {% for rating in transaction_ratings %}
+                            <div class="card rating-card mb-3">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div>
+                                            <strong>
+                                                {% if rating.rater.user_type == 'BUSINESS' %}
+                                                    {{ rating.rater.businessprofile.company_name }}
+                                                {% elif rating.rater.user_type == 'NONPROFIT' %}
+                                                    {{ rating.rater.businessprofile.organization_name }}
+                                                {% else %}
+                                                    {{ rating.rater.get_full_name }}
+                                                {% endif %}
+                                            </strong>
+                                            <span class="text-muted"> rated 
+                                                {% if rating.rated_user.user_type == 'BUSINESS' %}
+                                                    {{ rating.rated_user.businessprofile.company_name }}
+                                                {% elif rating.rated_user.user_type == 'NONPROFIT' %}
+                                                    {{ rating.rated_user.nonprofitprofile.organization_name }}
+                                                {% else %}
+                                                    {{ rating.rated_user.get_full_name }}
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="rating-stars mb-2">
+                                        {% for i in "12345"|make_list %}
+                                            {% if forloop.counter <= rating.rating %}
+                                                <i class="fas fa-star"></i>
+                                            {% else %}
+                                                <i class="far fa-star"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    
+                                    {% if rating.comment %}
+                                        <p class="mb-0">{{ rating.comment }}</p>
+                                    {% endif %}
+                                    
+                                    <div class="text-end mt-2">
+                                        <small class="text-muted">{{ rating.created_at|date:"M d, Y" }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>No ratings yet for this transaction.
+                        </div>
+                    {% endif %}
+                    
+                    {% if transaction.status == 'COMPLETED' %}
+                        {% if not transaction|has_user_rating:user %}
+                            <div class="text-center mt-3">
+                                <a href="{% url 'transactions:rate_transaction' transaction.id %}" class="btn btn-primary">
+                                    <i class="fas fa-star me-1"></i>Rate This Transaction
+                                </a>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+
+        <!-- Timeline Section -->
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0">Timeline</h5>
+            </div>
+            <div class="card-body">
+                <div class="transaction-timeline">
+                    <div class="timeline-item">
+                        <p class="mb-0"><strong>Request Created</strong></p>
+                        <p class="text-muted mb-0">{{ transaction.request.created_at|date:"M d, Y H:i" }}</p>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <p class="mb-0"><strong>Transaction Started</strong></p>
+                        <p class="text-muted mb-0">{{ transaction.transaction_date|date:"M d, Y H:i" }}</p>
+                    </div>
+                    
+                    {% if transaction.delivery.assigned_at %}
+                    <div class="timeline-item">
+                        <p class="mb-0"><strong>Delivery Assigned</strong></p>
+                        <p class="text-muted mb-0">{{ transaction.delivery.assigned_at|date:"M d, Y H:i" }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if transaction.delivery.picked_up_at %}
+                    <div class="timeline-item">
+                        <p class="mb-0"><strong>Food Picked Up</strong></p>
+                        <p class="text-muted mb-0">{{ transaction.delivery.picked_up_at|date:"M d, Y H:i" }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if transaction.delivery.delivered_at %}
+                    <div class="timeline-item">
+                        <p class="mb-0"><strong>Food Delivered</strong></p>
+                        <p class="text-muted mb-0">{{ transaction.delivery.delivered_at|date:"M d, Y H:i" }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if transaction.completion_date %}
+                    <div class="timeline-item">
+                        <p class="mb-0"><strong>Transaction Completed</strong></p>
+                        <p class="text-muted mb-0">{{ transaction.completion_date|date:"M d, Y H:i" }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% with ratings=transaction.ratings.all %}
+                        {% if ratings %}
+                            <div class="timeline-item">
+                                <p class="mb-0"><strong>Rated</strong></p>
+                                <p class="text-muted mb-0">{{ ratings.0.created_at|date:"M d, Y H:i" }}</p>
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

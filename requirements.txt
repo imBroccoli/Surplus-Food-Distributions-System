@@ -1,0 +1,27 @@
+asgiref==3.8.1
+Django==5.1.6
+django-countries==7.6.1
+django-phonenumber-field==8.0.0
+phonenumbers==8.13.55
+sqlparse==0.5.3
+typing_extensions==4.12.2
+django-crispy-forms==2.1
+crispy-bootstrap5==2024.2
+pytest==8.3.5
+pytest-django==4.10.0
+pytest-cov==6.0.0
+pytest-xdist==3.5.0
+coverage==7.6.12
+django-widget-tweaks==1.5.0
+Pillow
+reportlab==4.3.1
+xlsxwriter==3.2.2
+chardet==5.2.0  # Required by reportlab
+beautifulsoup4==4.12.3  # Required for acceptance and usability tests
+psycopg2-binary  
+dj-database-url==2.1.0  # For database URL configuration
+channels==4.0.0
+channels-redis==4.2.0
+django-cleanup==8.1.0
+django-jazzmin==3.0.1  # Modern responsive admin interface
+sweetify==2.3.1  # Sweet alert integration for Django

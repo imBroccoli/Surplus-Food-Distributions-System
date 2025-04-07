@@ -1,0 +1,456 @@
+{% load humanize %}
+
+<!-- Compliance Score Charts -->
+<div class="row g-4 mb-4">
+    <!-- Overall Compliance Chart -->
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent">
+                <h5 class="card-title mb-0">Overall Compliance Score</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="complianceScoreChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Compliance by Category Chart -->
+    <div class="col-12 col-xl-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent">
+                <h5 class="card-title mb-0">Compliance by Category</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="categoryComplianceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Risk Assessment -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent">
+        <h5 class="card-title mb-0">Risk Assessment Matrix</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-4">
+            {% for risk in report.data.risk_matrix %}
+            <div class="col-sm-6 col-lg-3">
+                <div class="p-3 rounded bg-light">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <div class="rounded-circle p-2 bg-{{ risk.color }} bg-opacity-10">
+                                    <i class="fas fa-{{ risk.icon }} fa-fw text-{{ risk.color }}"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-0">{{ risk.category }}</h6>
+                            </div>
+                        </div>
+                        <span class="badge bg-{{ risk.level_color }}">{{ risk.level }}</span>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-{{ risk.color }}" style="width: {{ risk.score }}%"></div>
+                    </div>
+                    <small class="text-muted d-block mt-2">
+                        {{ risk.description }}
+                    </small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Compliance Metrics -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="card-title mb-0">Compliance Metrics</h5>
+            </div>
+            <div class="col-auto">
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-download me-2"></i>Export
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'analytics:export_report' report.id 'pdf' %}">
+                            <i class="fas fa-file-pdf me-2"></i>Export as PDF
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'analytics:export_report' report.id 'csv' %}">
+                            <i class="fas fa-file-csv me-2"></i>Export as CSV
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'analytics:export_report' report.id 'excel' %}">
+                            <i class="fas fa-file-excel me-2"></i>Export as Excel
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Requirement</th>
+                        <th>Category</th>
+                        <th>Status</th>
+                        <th>Last Check</th>
+                        <th>Compliance Score</th>
+                        <th>Trend</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for metric in report.data.compliance_metrics %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-{{ metric.icon }} fa-fw me-2 text-{{ metric.color }}"></i>
+                                <div>
+                                    <div class="small fw-medium">{{ metric.name }}</div>
+                                    <small class="text-muted">{{ metric.description }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ metric.category_color }} bg-opacity-10 text-{{ metric.category_color }}">
+                                {{ metric.category }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ metric.status_color }}">{{ metric.status }}</span>
+                        </td>
+                        <td>
+                            <div class="small">{{ metric.last_check|date:"Y-m-d H:i" }}</div>
+                            <small class="text-muted">{{ metric.last_check|naturaltime }}</small>
+                        </td>
+                        <td style="width: 15%;">
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-{{ metric.score_color }}" 
+                                     style="width: {{ metric.score }}%"
+                                     title="{{ metric.score }}% compliant">
+                                </div>
+                            </div>
+                            <small class="text-muted">{{ metric.score }}%</small>
+                        </td>
+                        <td>
+                            <span class="{% if metric.trend > 0 %}text-success{% elif metric.trend < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                <i class="fas fa-{% if metric.trend > 0 %}arrow-up{% elif metric.trend < 0 %}arrow-down{% else %}minus{% endif %} fa-fw"></i>
+                                {{ metric.trend|abs }}%
+                            </span>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-link btn-sm p-0"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#metricDetails{{ metric.id }}">
+                                View
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Audit Log -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="card-title mb-0">Compliance Audit Log</h5>
+            </div>
+            <div class="col-auto">
+                <button type="button" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-filter me-2"></i>Filter
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Event</th>
+                        <th>Category</th>
+                        <th>User</th>
+                        <th>Timestamp</th>
+                        <th>Impact</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event in report.data.audit_log %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-{{ event.icon }} fa-fw me-2 text-{{ event.color }}"></i>
+                                <div>
+                                    <div class="small fw-medium">{{ event.name }}</div>
+                                    <small class="text-muted">{{ event.description }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ event.category_color }} bg-opacity-10 text-{{ event.category_color }}">
+                                {{ event.category }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {% if event.user.avatar %}
+                                <img src="{{ event.user.avatar }}" 
+                                     class="rounded-circle me-2"
+                                     width="32" height="32"
+                                     alt="{{ event.user.name }}">
+                                {% else %}
+                                <div class="rounded-circle bg-{{ event.user.color }} bg-opacity-10 
+                                            d-flex align-items-center justify-content-center me-2"
+                                     style="width: 32px; height: 32px;">
+                                    <i class="fas fa-user fa-sm text-{{ event.user.color }}"></i>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <div class="small fw-medium">{{ event.user.name }}</div>
+                                    <small class="text-muted">{{ event.user.role }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="small">{{ event.timestamp|date:"Y-m-d H:i" }}</div>
+                            <small class="text-muted">{{ event.timestamp|naturaltime }}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ event.impact_color }}">{{ event.impact }}</span>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-link btn-sm p-0"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#eventDetails{{ event.id }}">
+                                View
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Metric Detail Modals -->
+{% for metric in report.data.compliance_metrics %}
+<div class="modal fade" id="metricDetails{{ metric.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Compliance Metric Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted">Requirement</label>
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-{{ metric.icon }} fa-fw me-2 text-{{ metric.color }}"></i>
+                        {{ metric.name }}
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Description</label>
+                    <div>{{ metric.description }}</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Category</label>
+                    <div>
+                        <span class="badge bg-{{ metric.category_color }} bg-opacity-10 text-{{ metric.category_color }}">
+                            {{ metric.category }}
+                        </span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Status</label>
+                    <div>
+                        <span class="badge bg-{{ metric.status_color }}">{{ metric.status }}</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Compliance Score</label>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-{{ metric.score_color }}" 
+                             style="width: {{ metric.score }}%">
+                        </div>
+                    </div>
+                    <small class="text-muted">{{ metric.score }}% compliant</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Last Check</label>
+                    <div>{{ metric.last_check|date:"Y-m-d H:i" }}</div>
+                </div>
+                {% if metric.notes %}
+                <div>
+                    <label class="form-label text-muted">Notes</label>
+                    <div>{{ metric.notes }}</div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary">View Full Report</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Event Detail Modals -->
+{% for event in report.data.audit_log %}
+<div class="modal fade" id="eventDetails{{ event.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Audit Event Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted">Event</label>
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-{{ event.icon }} fa-fw me-2 text-{{ event.color }}"></i>
+                        {{ event.name }}
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Description</label>
+                    <div>{{ event.description }}</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Category</label>
+                    <div>
+                        <span class="badge bg-{{ event.category_color }} bg-opacity-10 text-{{ event.category_color }}">
+                            {{ event.category }}
+                        </span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Impact</label>
+                    <div>
+                        <span class="badge bg-{{ event.impact_color }}">{{ event.impact }}</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">User</label>
+                    <div class="d-flex align-items-center">
+                        {% if event.user.avatar %}
+                        <img src="{{ event.user.avatar }}" 
+                             class="rounded-circle me-2"
+                             width="32" height="32"
+                             alt="{{ event.user.name }}">
+                        {% else %}
+                        <div class="rounded-circle bg-{{ event.user.color }} bg-opacity-10 
+                                    d-flex align-items-center justify-content-center me-2"
+                             style="width: 32px; height: 32px;">
+                            <i class="fas fa-user fa-sm text-{{ event.user.color }}"></i>
+                        </div>
+                        {% endif %}
+                        <div>
+                            <div class="small fw-medium">{{ event.user.name }}</div>
+                            <small class="text-muted">{{ event.user.role }}</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Timestamp</label>
+                    <div>{{ event.timestamp|date:"Y-m-d H:i" }}</div>
+                </div>
+                {% if event.additional_details %}
+                <div>
+                    <label class="form-label text-muted">Additional Details</label>
+                    <div>{{ event.additional_details }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Chart.js Initialization -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Overall Compliance Score Chart
+    const scoreCtx = document.getElementById('complianceScoreChart').getContext('2d');
+    new Chart(scoreCtx, {
+        type: 'line',
+        data: {
+            labels: {{ report.data.charts.compliance_score.labels|safe }},
+            datasets: [{
+                label: 'Compliance Score',
+                data: {{ report.data.charts.compliance_score.data|safe }},
+                borderColor: '#0d6efd',
+                tension: 0.4,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+
+    // Category Compliance Chart
+    const categoryCtx = document.getElementById('categoryComplianceChart').getContext('2d');
+    new Chart(categoryCtx, {
+        type: 'radar',
+        data: {
+            labels: {{ report.data.charts.category_compliance.labels|safe }},
+            datasets: [{
+                label: 'Current Score',
+                data: {{ report.data.charts.category_compliance.current|safe }},
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.2)',
+                pointBackgroundColor: '#0d6efd'
+            }, {
+                label: 'Previous Score',
+                data: {{ report.data.charts.category_compliance.previous|safe }},
+                borderColor: '#6c757d',
+                backgroundColor: 'rgba(108, 117, 125, 0.2)',
+                pointBackgroundColor: '#6c757d'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                r: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+});
+</script>

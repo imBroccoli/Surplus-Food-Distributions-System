@@ -1,0 +1,129 @@
+{% load humanize %}
+
+<div class="row g-4">
+    <!-- Compliance Score -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="p-3 rounded bg-light">
+            <div class="d-flex align-items-center mb-2">
+                <div class="flex-shrink-0">
+                    <div class="rounded-circle p-2 bg-success bg-opacity-10">
+                        <i class="fas fa-check-circle fa-fw text-success"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h6 class="mb-0">Compliance Score</h6>
+                </div>
+            </div>
+            <h3 class="mb-0">{{ report.data.compliance_metrics.score|default:0|floatformat:1 }}%</h3>
+            <small class="text-muted">Overall compliance</small>
+        </div>
+    </div>
+    <!-- Violations -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="p-3 rounded bg-light">
+            <div class="d-flex align-items-center mb-2">
+                <div class="flex-shrink-0">
+                    <div class="rounded-circle p-2 bg-danger bg-opacity-10">
+                        <i class="fas fa-exclamation-circle fa-fw text-danger"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h6 class="mb-0">Violations</h6>
+                </div>
+            </div>
+            <h3 class="mb-0">{{ report.data.compliance_metrics.violations|default:0|intcomma }}</h3>
+            <small class="text-muted">This period</small>
+        </div>
+    </div>
+    <!-- Resolved Issues -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="p-3 rounded bg-light">
+            <div class="d-flex align-items-center mb-2">
+                <div class="flex-shrink-0">
+                    <div class="rounded-circle p-2 bg-primary bg-opacity-10">
+                        <i class="fas fa-tasks fa-fw text-primary"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h6 class="mb-0">Resolved Issues</h6>
+                </div>
+            </div>
+            <h3 class="mb-0">{{ report.data.compliance_metrics.resolved|default:0|intcomma }}</h3>
+            <small class="text-muted">{{ report.data.compliance_metrics.resolution_rate|default:0 }}% resolution rate</small>
+        </div>
+    </div>
+    <!-- Average Resolution Time -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="p-3 rounded bg-light">
+            <div class="d-flex align-items-center mb-2">
+                <div class="flex-shrink-0">
+                    <div class="rounded-circle p-2 bg-warning bg-opacity-10">
+                        <i class="fas fa-clock fa-fw text-warning"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h6 class="mb-0">Avg Resolution Time</h6>
+                </div>
+            </div>
+            <h3 class="mb-0">{{ report.data.compliance_metrics.avg_resolution_time|default:0|floatformat:1 }} hrs</h3>
+            <small class="text-muted">Per violation</small>
+        </div>
+    </div>
+</div>
+
+<!-- Compliance Categories -->
+<div class="mt-4">
+    <h6 class="mb-3">Compliance by Category</h6>
+    <div class="row g-4">
+        {% for category in report.data.compliance_categories %}
+        <div class="col-sm-6 col-lg-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span>{{ category.name }}</span>
+                <span class="badge bg-{{ category.status_color }}">{{ category.status }}</span>
+            </div>
+            <div class="progress" style="height: 8px;">
+                <div class="progress-bar bg-{{ category.color }}" style="width: {{ category.compliance_rate }}%"></div>
+            </div>
+            <small class="text-muted d-block mt-1">{{ category.description }}</small>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Recent Incidents -->
+{% if report.data.recent_incidents %}
+<div class="mt-4">
+    <h6 class="mb-3">Recent Compliance Incidents</h6>
+    <div class="row g-4">
+        {% for incident in report.data.recent_incidents %}
+        <div class="col-12">
+            <div class="p-3 rounded bg-light">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <div class="rounded-circle p-2 {% if incident.severity == 'HIGH' %}bg-danger
+                            {% elif incident.severity == 'MEDIUM' %}bg-warning
+                            {% else %}bg-info{% endif %} bg-opacity-10">
+                            <i class="fas fa-exclamation-triangle fa-fw {% if incident.severity == 'HIGH' %}text-danger
+                                {% elif incident.severity == 'MEDIUM' %}text-warning
+                                {% else %}text-info{% endif %}"></i>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">{{ incident.title }}</h6>
+                            <span class="badge {% if incident.severity == 'HIGH' %}bg-danger
+                                {% elif incident.severity == 'MEDIUM' %}bg-warning
+                                {% else %}bg-info{% endif %}">
+                                {{ incident.severity }}
+                            </span>
+                        </div>
+                        <small class="text-muted">{{ incident.timestamp|naturaltime }} - {{ incident.location }}</small>
+                        <p class="mb-0 mt-2">{{ incident.description }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}

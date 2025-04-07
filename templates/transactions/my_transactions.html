@@ -1,0 +1,174 @@
+{% extends 'transactions/base_transactions.html' %}
+{% load rating_filters %}
+{% block transaction_title %}My Transactions{% endblock %}
+{% block transaction_subtitle %}View and manage your food transactions{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .rating-stars {
+        color: #ffc107;
+        font-size: 1rem;
+    }
+    .rating-badge {
+        font-size: 0.75rem;
+    }
+</style>
+{% endblock %}
+
+{% block transaction_content %}
+<div class="card shadow-sm mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Transaction History</h5>
+        <div>
+            <a href="{% url 'transactions:ratings_given' %}" class="btn btn-sm btn-outline-primary me-2">
+                <i class="fas fa-star me-1"></i>Ratings Given
+            </a>
+            <a href="{% url 'transactions:ratings_received' %}" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-star-half-alt me-1"></i>Ratings Received
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Transaction ID</th>
+                        <th>Food Listing</th>
+                        <th>Requester</th>
+                        <th>Quantity</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Rating</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in page_obj %}
+                    <tr>
+                        <td>#{{ transaction.id }}</td>
+                        <td>
+                            <a href="{% url 'transactions:make_request' transaction.request.listing.pk %}" class="text-decoration-none">
+                                {{ transaction.request.listing.title }}
+                            </a>
+                        </td>
+                        <td>
+                            <div>{{ transaction.request.requester.get_full_name }}</div>
+                            <small class="text-muted">{{ transaction.request.requester.email }}</small>
+                        </td>
+                        <td>{{ transaction.request.quantity_requested }} {{ transaction.request.listing.unit }}</td>
+                        <td>
+                            <span class="badge {% if transaction.status == 'PENDING' %}bg-warning
+                                       {% elif transaction.status == 'IN_PROGRESS' %}bg-info
+                                       {% elif transaction.status == 'COMPLETED' %}bg-success
+                                       {% else %}bg-secondary{% endif %}">
+                                {{ transaction.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ transaction.transaction_date|date:"M d, Y" }}</td>
+                        <td>
+                            {% with my_rating=transaction.ratings.all|get_latest_rating %}
+                                {% if my_rating %}
+                                    <div class="rating-stars">
+                                        {% for i in "12345"|make_list %}
+                                            {% if forloop.counter <= my_rating.rating %}
+                                                <i class="fas fa-star"></i>
+                                            {% else %}
+                                                <i class="far fa-star"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {% if transaction.status == 'COMPLETED' %}
+                                        <span class="badge bg-light text-dark rating-badge">Not Rated</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary rating-badge">Pending</span>
+                                    {% endif %}
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{% url 'transactions:transaction_detail' transaction.id %}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-eye me-1"></i>View
+                                </a>
+                                {% if transaction.status == 'PENDING' %}
+                                    <button type="button" class="btn btn-sm btn-success" onclick="updateStatus({{ transaction.id }}, 'ACCEPTED')">
+                                        <i class="fas fa-check me-1"></i>Accept
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-danger" onclick="updateStatus({{ transaction.id }}, 'REJECTED')">
+                                        <i class="fas fa-times me-1"></i>Reject
+                                    </button>
+                                {% endif %}
+                                {% if transaction.status == 'COMPLETED' %}
+                                    {% if not transaction|has_user_rating:user %}
+                                        <a href="{% url 'transactions:rate_transaction' transaction.id %}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-star me-1"></i>Rate
+                                        </a>
+                                    {% else %}
+                                        <a href="{% url 'transactions:rating_detail' transaction|get_user_rating_id:user %}" class="btn btn-sm btn-outline-success">
+                                            <i class="fas fa-star me-1"></i>View Rating
+                                        </a>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4">
+                            <i class="fas fa-exchange-alt fa-2x text-muted mb-3"></i>
+                            <h5>No Transactions Yet</h5>
+                            <p class="text-muted">When you approve food requests, they will appear here.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if page_obj.has_other_pages %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1" aria-label="First">
+                    <span aria-hidden="true">&laquo;&laquo;</span>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <a class="page-link" href="#" aria-label="First">
+                    <span aria-hidden="true">&laquo;&laquo;</span>
+                </a>
+            </li>
+            <li class="page-item disabled">
+                <a class="page-link" href="#" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+        {% endif %}
+        
+        {% for num in page_obj.paginator.page_range %}
+            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+            </li>
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

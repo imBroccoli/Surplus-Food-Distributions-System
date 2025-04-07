@@ -1,0 +1,90 @@
+{% load humanize %}
+
+<div class="row g-4">
+    <!-- Total Transactions -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="p-3 rounded bg-light">
+            <div class="d-flex align-items-center mb-2">
+                <div class="flex-shrink-0">
+                    <div class="rounded-circle p-2 bg-primary bg-opacity-10">
+                        <i class="fas fa-exchange-alt fa-fw text-primary"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h6 class="mb-0">Total Transactions</h6>
+                </div>
+            </div>
+            <h3 class="mb-0">{{ report.data.transaction_metrics.total|default:0|intcomma }}</h3>
+            <small class="text-muted">{{ report.data.transaction_metrics.growth_rate|default:0 }}% growth</small>
+        </div>
+    </div>
+    <!-- Success Rate -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="p-3 rounded bg-light">
+            <div class="d-flex align-items-center mb-2">
+                <div class="flex-shrink-0">
+                    <div class="rounded-circle p-2 bg-success bg-opacity-10">
+                        <i class="fas fa-check-circle fa-fw text-success"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h6 class="mb-0">Success Rate</h6>
+                </div>
+            </div>
+            <h3 class="mb-0">{{ report.data.transaction_metrics.success_rate|default:0|floatformat:1 }}%</h3>
+            <small class="text-muted">{{ report.data.transaction_metrics.completed|default:0 }} completed</small>
+        </div>
+    </div>
+    <!-- Average Response Time -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="p-3 rounded bg-light">
+            <div class="d-flex align-items-center mb-2">
+                <div class="flex-shrink-0">
+                    <div class="rounded-circle p-2 bg-warning bg-opacity-10">
+                        <i class="fas fa-clock fa-fw text-warning"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h6 class="mb-0">Avg Response Time</h6>
+                </div>
+            </div>
+            <h3 class="mb-0">{{ report.data.transaction_metrics.avg_response_time|default:0|floatformat:1 }} hrs</h3>
+            <small class="text-muted">From request to approval</small>
+        </div>
+    </div>
+    <!-- Average Value -->
+    <div class="col-sm-6 col-lg-3">
+        <div class="p-3 rounded bg-light">
+            <div class="d-flex align-items-center mb-2">
+                <div class="flex-shrink-0">
+                    <div class="rounded-circle p-2 bg-info bg-opacity-10">
+                        <i class="fas fa-dollar-sign fa-fw text-info"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h6 class="mb-0">Average Value</h6>
+                </div>
+            </div>
+            <h3 class="mb-0">${{ report.data.transaction_metrics.avg_value|default:0|floatformat:2|intcomma }}</h3>
+            <small class="text-muted">Per transaction</small>
+        </div>
+    </div>
+</div>
+
+<!-- Transaction Types -->
+<div class="mt-4">
+    <h6 class="mb-3">Transaction Distribution</h6>
+    <div class="row g-4">
+        {% for type in report.data.transaction_types %}
+        <div class="col-sm-6 col-lg-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span>{{ type.name }}</span>
+                <span class="badge bg-primary">{{ type.count|intcomma }}</span>
+            </div>
+            <div class="progress" style="height: 8px;">
+                <div class="progress-bar" style="width: {{ type.percentage }}%"></div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>

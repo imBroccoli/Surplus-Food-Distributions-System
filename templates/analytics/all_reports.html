@@ -1,0 +1,677 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% load static %}
+
+{% block title %}All Reports - Bulk Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2">All Reports</h1>
+            <p class="text-muted">Manage and bulk delete reports</p>
+        </div>
+        <div>
+            <a href="{% url 'analytics:reports_dashboard' %}" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+            </a>
+            <a href="{% url 'analytics:generate_report' %}" class="btn btn-outline-primary">
+                <i class="fas fa-plus me-2"></i>New Report
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent">
+            <h5 class="card-title mb-0">Filters</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{% url 'analytics:all_reports' %}" id="filterForm" class="row g-3 needs-validation" novalidate>
+                <div class="col-md-3">
+                    <label for="type" class="form-label">Report Type</label>
+                    <select name="type" id="type" class="form-select">
+                        <option value="">All Types</option>
+                        {% for choice in report_type_choices %}
+                        <option value="{{ choice.value }}" {% if filters.report_type == choice.value %}selected{% endif %}>
+                            {{ choice.display }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="start_date" class="form-label">Start Date</label>
+                    <input type="date" class="form-control" id="start_date" name="start_date" 
+                           value="{{ filters.start_date }}" max="{{ today|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="end_date" class="form-label">End Date</label>
+                    <input type="date" class="form-control" id="end_date" name="end_date" 
+                           value="{{ filters.end_date }}" max="{{ today|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-filter me-2"></i>Apply Filters
+                    </button>
+                    <a href="{% url 'analytics:all_reports' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-broom me-2"></i>Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bulk Actions -->
+    <form method="POST" action="{% url 'analytics:bulk_delete_reports' %}" id="bulkActionsForm">
+        {% csrf_token %}
+        <!-- Hidden inputs to preserve filter state after form submission -->
+        <input type="hidden" name="type" value="{{ filters.report_type }}">
+        <input type="hidden" name="start_date" value="{{ filters.start_date }}">
+        <input type="hidden" name="end_date" value="{{ filters.end_date }}">
+        <input type="hidden" name="page" value="{{ reports.number }}">
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">All Reports</h5>
+                <div>
+                    <span id="selectedCount" class="me-2 badge bg-primary">0 selected</span>
+                    <button type="button" id="selectAllBtn" class="btn btn-sm btn-outline-primary me-2">
+                        <i class="fas fa-check-square me-1"></i>Select All
+                    </button>
+                    <button type="button" id="bulkDeleteBtn" class="btn btn-sm btn-danger" disabled>
+                        <i class="fas fa-trash me-1"></i>Delete Selected
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="40">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="toggleAll">
+                                    </div>
+                                </th>
+                                <th>Title</th>
+                                <th>Type</th>
+                                <th>Generated</th>
+                                <th>By</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for report in reports %}
+                            <tr>
+                                <td>
+                                    <div class="form-check">
+                                        <input class="form-check-input report-checkbox" type="checkbox" 
+                                               name="report_ids" value="{{ report.id }}">
+                                    </div>
+                                </td>
+                                <td>{{ report.title }}</td>
+                                <td>
+                                    <span class="badge {% if report.report_type == 'IMPACT' %}bg-primary
+                                        {% elif report.report_type == 'TRANSACTION' %}bg-success
+                                        {% elif report.report_type == 'USER_ACTIVITY' %}bg-info
+                                        {% elif report.report_type == 'COMPLIANCE' %}bg-warning
+                                        {% else %}bg-danger{% endif %}">
+                                        {{ report.get_report_type_display }}
+                                    </span>
+                                </td>
+                                <td>{{ report.date_generated|date:"Y-m-d H:i" }}</td>
+                                <td>{{ report.generated_by.get_full_name|default:report.generated_by.email }}</td>
+                                <td>
+                                    {% if report.is_scheduled %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-clock me-1"></i>{{ report.get_schedule_frequency_display }}
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">One-time</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{% url 'analytics:report_detail' report.id %}" 
+                                           class="btn btn-sm btn-outline-primary me-1"
+                                           data-bs-toggle="tooltip"
+                                           title="View Report">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-success me-1"
+                                                data-bs-toggle="tooltip"
+                                                title="Regenerate Report"
+                                                onclick="regenerateReport({{ report.id }})">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-info me-1"
+                                                data-bs-toggle="tooltip"
+                                                title="Schedule Report"
+                                                onclick="scheduleReport({{ report.id }})">
+                                            <i class="fas fa-clock"></i>
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-danger"
+                                                data-bs-toggle="tooltip"
+                                                title="Delete Report"
+                                                onclick="deleteReport({{ report.id }})">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4">
+                                    <div class="text-muted">
+                                        <i class="fas fa-info-circle me-2"></i>No reports found matching your criteria
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Pagination Controls -->
+            {% if reports.paginator.num_pages > 1 %}
+            <div class="card-footer bg-transparent border-0">
+                <nav aria-label="Report navigation">
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if reports.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if filters.report_type %}&type={{ filters.report_type }}{% endif %}{% if filters.start_date %}&start_date={{ filters.start_date }}{% endif %}{% if filters.end_date %}&end_date={{ filters.end_date }}{% endif %}" aria-label="First">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ reports.previous_page_number }}{% if filters.report_type %}&type={{ filters.report_type }}{% endif %}{% if filters.start_date %}&start_date={{ filters.start_date }}{% endif %}{% if filters.end_date %}&end_date={{ filters.end_date }}{% endif %}" aria-label="Previous">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% for num in reports.paginator.page_range %}
+                            {% if reports.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                            {% elif num > reports.number|add:'-3' and num < reports.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if filters.report_type %}&type={{ filters.report_type }}{% endif %}{% if filters.start_date %}&start_date={{ filters.start_date }}{% endif %}{% if filters.end_date %}&end_date={{ filters.end_date }}{% endif %}">{{ num }}</a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if reports.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ reports.next_page_number }}{% if filters.report_type %}&type={{ filters.report_type }}{% endif %}{% if filters.start_date %}&start_date={{ filters.start_date }}{% endif %}{% if filters.end_date %}&end_date={{ filters.end_date }}{% endif %}" aria-label="Next">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ reports.paginator.num_pages }}{% if filters.report_type %}&type={{ filters.report_type }}{% endif %}{% if filters.start_date %}&start_date={{ filters.start_date }}{% endif %}{% if filters.end_date %}&end_date={{ filters.end_date }}{% endif %}" aria-label="Last">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </form>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteConfirmModalLabel">Confirm Deletion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the selected reports? This action cannot be undone.</p>
+                    <p class="text-danger" id="deleteCount"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schedule Modal -->
+    <div class="modal fade" id="scheduleModal" tabindex="-1" aria-labelledby="scheduleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="scheduleForm" method="POST">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="scheduleModalLabel">Schedule Report</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="frequency" class="form-label">Generation Frequency</label>
+                            <select class="form-select" id="frequency" name="frequency" required onchange="toggleTimeInput()">
+                                <option value="">Select frequency</option>
+                                <option value="DAILY">Daily</option>
+                                <option value="WEEKLY">Weekly</option>
+                                <option value="MONTHLY">Monthly</option>
+                                <option value="QUARTERLY">Quarterly</option>
+                            </select>
+                        </div>
+                        <div class="mb-3" id="timeInputGroup" style="display: none;">
+                            <label for="schedule_time" class="form-label">Generation Time (Daily reports only)</label>
+                            <input type="time" class="form-control" id="schedule_time" name="schedule_time" value="09:00">
+                            <small class="text-muted">Select the time when daily reports should be generated</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Schedule</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script src="{% static 'js/date-filters.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize date filters
+    initializeDateFilters();
+    
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(function(tooltipTriggerEl) {
+        new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Bulk selection functionality
+    const toggleAll = document.getElementById('toggleAll');
+    const reportCheckboxes = document.querySelectorAll('.report-checkbox');
+    const selectedCountEl = document.getElementById('selectedCount');
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    
+    // Toggle all checkboxes
+    toggleAll.addEventListener('change', function() {
+        const isChecked = this.checked;
+        reportCheckboxes.forEach(checkbox => {
+            checkbox.checked = isChecked;
+        });
+        updateSelectedCount();
+    });
+    
+    // Select all button
+    selectAllBtn.addEventListener('click', function() {
+        toggleAll.checked = true;
+        reportCheckboxes.forEach(checkbox => {
+            checkbox.checked = true;
+        });
+        updateSelectedCount();
+    });
+    
+    // Individual checkbox change
+    reportCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateSelectedCount();
+            // Check if all checkboxes are checked
+            const allChecked = Array.from(reportCheckboxes).every(cb => cb.checked);
+            toggleAll.checked = allChecked;
+        });
+    });
+    
+    // Update selected count
+    function updateSelectedCount() {
+        const selectedCount = document.querySelectorAll('.report-checkbox:checked').length;
+        selectedCountEl.textContent = `${selectedCount} selected`;
+        
+        // Enable/disable bulk delete button
+        bulkDeleteBtn.disabled = selectedCount === 0;
+    }
+    
+    // Bulk delete confirmation
+    const deleteConfirmModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+    const deleteCountEl = document.getElementById('deleteCount');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    
+    bulkDeleteBtn.addEventListener('click', function() {
+        const selectedCount = document.querySelectorAll('.report-checkbox:checked').length;
+        deleteCountEl.textContent = `You are about to delete ${selectedCount} report(s).`;
+        deleteConfirmModal.show();
+    });
+    
+    confirmDeleteBtn.addEventListener('click', function() {
+        document.getElementById('bulkActionsForm').submit();
+    });
+    
+    // Date range validation
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+    const filterForm = document.getElementById('filterForm');
+
+    // Set max attribute to include today's date
+    // We need to use toISOString and then get just the date part to ensure proper formatting
+    const today = new Date();
+    // Add a day to ensure today is included and not disabled
+    today.setDate(today.getDate());
+    const todayStr = today.toISOString().split('T')[0];
+    startDateInput.max = todayStr;
+    endDateInput.max = todayStr;
+
+    // Update end date min when start date changes
+    startDateInput.addEventListener('change', function() {
+        endDateInput.min = this.value;
+    });
+
+    // Validate dates when end date changes
+    endDateInput.addEventListener('change', function() {
+        validateDates();
+    });
+
+    function validateDates() {
+        const startDate = startDateInput.value ? new Date(startDateInput.value) : null;
+        const endDate = endDateInput.value ? new Date(endDateInput.value) : null;
+        
+        let isValid = true;
+
+        // Only check if end date is before start date
+        if (startDate && endDate && endDate < startDate) {
+            endDateInput.setCustomValidity('End date cannot be before start date');
+            isValid = false;
+        } else {
+            // Clear any validation errors
+            startDateInput.setCustomValidity('');
+            endDateInput.setCustomValidity('');
+        }
+
+        return isValid;
+    }
+
+    // Validate on form submission - modified to allow today's date
+    filterForm.addEventListener('submit', function(e) {
+        const isValid = validateDates();
+        
+        if (!isValid) {
+            e.preventDefault();
+            // Report validity of the end date input
+            endDateInput.reportValidity();
+        }
+    });
+});
+
+function regenerateReport(reportId) {
+    sweetify.fire({
+        title: 'Regenerate Report',
+        text: 'Are you sure you want to regenerate this report with fresh data?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, regenerate it',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#3085d6',
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Create a form data object for the POST request
+            const formData = new FormData();
+            
+            // Get CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            // Show loading indicator
+            sweetify.fire({
+                title: 'Regenerating report...',
+                text: 'Please wait while we regenerate the report with fresh data',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    sweetify.showLoading();
+                }
+            });
+            
+            // Send POST request
+            fetch(`/analytics/reports/${reportId}/regenerate/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrfToken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Show success message
+                    sweetify.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: data.message || 'Report regenerated successfully',
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => {
+                        // Reload the page to show the updated report
+                        window.location.reload();
+                    });
+                } else {
+                    // Show error message
+                    sweetify.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message || 'Failed to regenerate report'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Show error message
+                sweetify.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'An unexpected error occurred while regenerating the report'
+                });
+            });
+        }
+    });
+}
+
+function scheduleReport(reportId) {
+    sweetify.fire({
+        title: 'Schedule Report',
+        html: `
+            <form id="scheduleForm" class="text-start">
+                <div class="mb-3">
+                    <label class="form-label">Frequency</label>
+                    <select class="form-select" id="swal-frequency" required>
+                        <option value="">Select frequency</option>
+                        <option value="DAILY">Daily</option>
+                        <option value="WEEKLY">Weekly</option>
+                        <option value="MONTHLY">Monthly</option>
+                        <option value="QUARTERLY">Quarterly</option>
+                    </select>
+                </div>
+                <div class="mb-3" id="swal-timeField" style="display: none;">
+                    <label class="form-label">Time (for daily reports)</label>
+                    <input type="time" class="form-control" id="swal-scheduleTime" value="09:00">
+                    <small class="text-muted">Select time for report generation</small>
+                </div>
+            </form>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Schedule',
+        cancelButtonText: 'Cancel',
+        focusConfirm: false,
+        didOpen: () => {
+            const frequencySelect = document.getElementById('swal-frequency');
+            const timeField = document.getElementById('swal-timeField');
+            
+            frequencySelect.addEventListener('change', function() {
+                timeField.style.display = this.value === 'DAILY' ? 'block' : 'none';
+            });
+        },
+        preConfirm: () => {
+            const frequency = document.getElementById('swal-frequency').value;
+            const scheduleTime = document.getElementById('swal-scheduleTime').value;
+            
+            if (!frequency) {
+                sweetify.showValidationMessage('Please select a frequency');
+                return false;
+            }
+            
+            if (frequency === 'DAILY' && !scheduleTime) {
+                sweetify.showValidationMessage('Please select a time for daily reports');
+                return false;
+            }
+            
+            return { frequency, scheduleTime };
+        }
+    }).then((result) => {
+        if (result.isConfirmed && result.value) {
+            const formData = new FormData();
+            formData.append('frequency', result.value.frequency);
+            if (result.value.scheduleTime) {
+                formData.append('schedule_time', result.value.scheduleTime);
+            }
+            
+            sweetify.fire({
+                title: 'Scheduling Report...',
+                text: 'Please wait while we process your request',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    sweetify.showLoading();
+                }
+            });
+            
+            fetch(`/analytics/reports/${reportId}/schedule/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    sweetify.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: data.message || 'Report scheduled successfully',
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    sweetify.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message || 'An error occurred while scheduling the report'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                sweetify.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'An error occurred while scheduling the report'
+                });
+            });
+        }
+    });
+}
+
+function toggleTimeInput() {
+    const frequency = document.getElementById('frequency').value;
+    const timeInputGroup = document.getElementById('timeInputGroup');
+    timeInputGroup.style.display = frequency === 'DAILY' ? 'block' : 'none';
+}
+
+function deleteReport(reportId) {
+    sweetify.fire({
+        title: 'Delete Report',
+        text: 'Are you sure you want to delete this report? This action cannot be undone.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, delete it',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#d33',
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Create a form data object for the POST request
+            const formData = new FormData();
+            
+            // Get CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            // Show loading indicator
+            sweetify.fire({
+                title: 'Deleting report...',
+                text: 'Please wait while we process your request',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    sweetify.showLoading();
+                }
+            });
+            
+            // Send POST request
+            fetch(`/analytics/reports/${reportId}/delete/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrfToken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    sweetify.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: data.message || 'Report deleted successfully',
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => {
+                        // Reload the page to show the updated list
+                        window.location.reload();
+                    });
+                } else {
+                    sweetify.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message || 'Failed to delete report'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                sweetify.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'An unexpected error occurred while deleting the report'
+                });
+            });
+        }
+    });
+}
+
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    // ...existing initialization code...
+});
+</script>
+{% endblock extra_js %}
+{% endblock content %}

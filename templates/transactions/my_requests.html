@@ -1,0 +1,170 @@
+{% extends 'transactions/base_transactions.html' %}
+{% load rating_filters %}
+
+{% block transaction_title %}My Food Requests{% endblock %}
+{% block transaction_subtitle %}Track your food requests{% endblock %}
+
+{% block transaction_header_actions %}
+<div>
+    <a href="{% url 'transactions:browse_listings' %}" class="btn btn-light">
+        <i class="fas fa-search me-2"></i>Browse More Listings
+    </a>
+</div>
+{% endblock %}
+
+{% block transaction_content %}
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Listing</th>
+                        <th>Supplier</th>
+                        <th>Quantity</th>
+                        <th>Pickup Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for request in page_obj %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'transactions:make_request' request.listing.id %}" class="text-decoration-none">
+                                {{ request.listing.title }}
+                            </a>
+                        </td>
+                        <td>
+                            <div>{{ request.listing.supplier.businessprofile.company_name }}</div>
+                            <small class="text-muted">{{ request.listing.supplier.email }}</small>
+                        </td>
+                        <td>{{ request.quantity_requested }} {{ request.listing.unit }}</td>
+                        <td>{{ request.pickup_date|date:"M d, Y H:i" }}</td>
+                        <td>
+                            <span class="badge {% if request.status == 'PENDING' %}bg-warning
+                                       {% elif request.status == 'APPROVED' %}bg-success
+                                       {% elif request.status == 'REJECTED' %}bg-danger
+                                       {% elif request.status == 'COMPLETED' %}bg-info
+                                       {% else %}bg-secondary{% endif %}">
+                                {{ request.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                {% if request.transaction %}
+                                    <a href="{% url 'transactions:transaction_detail' request.transaction.id %}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-eye me-1"></i>View Details
+                                    </a>
+                                {% endif %}
+                                
+                                {% if request.status == 'COMPLETED' %}
+                                    {% if request.transaction and not request.transaction|has_user_rating:user %}
+                                        <a href="{% url 'transactions:rate_transaction' request.transaction.id %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-star me-1"></i>Rate
+                                        </a>
+                                    {% elif request.transaction|has_user_rating:user %}
+                                        <a href="{% url 'transactions:transaction_detail' request.transaction.id %}#ratings" class="btn btn-sm btn-outline-success">
+                                            <i class="fas fa-star me-1"></i>View Rating
+                                        </a>
+                                    {% endif %}
+                                {% endif %}
+                                
+                                {% if request.status == 'PENDING' %}
+                                    <button class="btn btn-sm btn-outline-danger" onclick="cancelRequest({{ request.id }})">
+                                        <i class="fas fa-times me-1"></i>Cancel
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <i class="fas fa-clipboard-list fa-2x text-muted mb-3"></i>
+                            <h5>No Requests Yet</h5>
+                            <p class="text-muted">You haven't made any food requests yet.</p>
+                            <a href="{% url 'transactions:browse_listings' %}" class="btn btn-primary">
+                                <i class="fas fa-search me-2"></i>Browse Listings
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if page_obj.has_other_pages %}
+    {% include "transactions/includes/pagination.html" %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function cancelRequest(requestId) {
+    sweetify.fire({
+        title: 'Cancel Request',
+        text: 'Are you sure you want to cancel this request?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, cancel it',
+        cancelButtonText: 'No, keep it',
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Show loading state
+            sweetify.fire({
+                title: 'Processing...',
+                text: 'Cancelling your request',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    sweetify.showLoading();
+                }
+            });
+            fetch(`/transactions/requests/${requestId}/cancel/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                // Show success message
+                sweetify.fire({
+                    icon: 'success',
+                    title: 'Success!',
+                    text: 'Request cancelled successfully',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                }).then(() => {
+                    window.location.reload();
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                sweetify.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to cancel request. Please try again.',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+            });
+        }
+    });
+}
+</script>
+{% endblock %}

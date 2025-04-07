@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Register - Surplus Food Distribution System{% endblock %}
+
+{% block extra_css %}
+<style>
+.hidden {
+    display: none;
+}
+.form-check {
+    padding-left: 1.5rem;
+}
+.form-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: none;
+    margin-bottom: 2rem;
+}
+.card-header {
+    background: #f8f9fa;
+    border-bottom: none;
+    padding: 1.5rem 2rem 0.5rem;
+}
+.card-body {
+    padding: 2rem;
+}
+.section-title {
+    color: #0d6efd;
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e9ecef;
+}
+.form-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.btn-toolbar {
+    margin-top: 2rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="form-container">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="h2 text-center mb-0">Create Account</h1>
+                <p class="text-muted text-center mb-0 mt-2">Join our food distribution network</p>
+            </div>
+            <div class="card-body">
+                <form method="post" class="registration-form needs-validation" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Main User Form -->
+                    <div class="form-section">
+                        <h4 class="section-title">Account Information</h4>
+                        {% crispy form %}
+                    </div>
+
+                    <!-- Dynamic Profile Forms -->
+                    <div id="business-form" class="form-section hidden">
+                        <h4 class="section-title">Business Information</h4>
+                        {% crispy business_form %}
+                    </div>
+
+                    <div id="nonprofit-form" class="form-section hidden">
+                        <h4 class="section-title">Organization Information</h4>
+                        {% crispy nonprofit_form %}
+                    </div>
+
+                    <div id="volunteer-form" class="form-section hidden">
+                        <h4 class="section-title">Volunteer Information</h4>
+                        {% crispy volunteer_form %}
+                    </div>
+
+                    <div class="d-grid gap-3">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-user-plus me-2"></i>Create Account
+                        </button>
+                        <a href="{% url 'users:login' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-sign-in-alt me-2"></i>Already have an account? Login
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Messages are now handled by the sweetify tag in base.html template
+    
+    const form = document.querySelector('.registration-form');
+    const userTypeSelect = document.querySelector('#id_user_type');
+    const profileForms = {
+        'BUSINESS': document.querySelector('#business-form'),
+        'NONPROFIT': document.querySelector('#nonprofit-form'),
+        'VOLUNTEER': document.querySelector('#volunteer-form')
+    };
+    
+    function showProfileForm(userType) {
+        Object.values(profileForms).forEach(form => {
+            if (form) {
+                form.classList.add('hidden');
+                // Disable fields in hidden forms
+                form.querySelectorAll('input, select, textarea').forEach(input => {
+                    input.disabled = true;
+                    input.required = false; // Remove required attribute when hidden
+                });
+            }
+        });
+        const selectedForm = profileForms[userType];
+        if (selectedForm) {
+            selectedForm.classList.remove('hidden');
+            // Enable fields in visible form
+            selectedForm.querySelectorAll('input, select, textarea').forEach(input => {
+                input.disabled = false;
+                // Restore required attribute based on data-required
+                if (input.hasAttribute('data-required')) {
+                    input.required = true;
+                }
+            });
+        }
+    }
+    
+    userTypeSelect?.addEventListener('change', function() {
+        showProfileForm(this.value);
+    });
+    
+    // Show initial form if user type is pre-selected
+    if (userTypeSelect?.value) {
+        showProfileForm(userTypeSelect.value);
+    }
+    
+    // Form validation
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Find first invalid field
+            const firstInvalid = form.querySelector(':invalid');
+            if (firstInvalid) {
+                firstInvalid.focus();
+                firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                sweetify.fire({
+                    icon: 'error',
+                    title: 'Validation Error',
+                    text: 'Please check the form for errors and try again.',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+            }
+        } else {
+            // Show loading state
+            sweetify.fire({
+                title: 'Creating Account',
+                text: 'Please wait while we set up your account...',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    sweetify.showLoading();
+                }
+            });
+        }
+        form.classList.add('was-validated');
+    });
+});
+</script>
+{% endblock %}
