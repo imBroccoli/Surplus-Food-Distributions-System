@@ -101,7 +101,7 @@
         </div>
 
         <!-- Ratings Summary Section -->
-        {% if user.user_type != 'ADMIN' %}
+        {% if user.user_type != 'ADMIN' and user.user_type != 'VOLUNTEER' %}
         <div class="profile-section mt-4">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h3 class="mb-0">Ratings Summary</h3>
