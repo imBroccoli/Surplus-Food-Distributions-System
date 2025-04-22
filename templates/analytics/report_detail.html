@@ -56,7 +56,7 @@
                     <h6 class="mb-3">Key Metrics</h6>
                     <div class="row g-3">
                         {% for key, value in report.data.metrics.items %}
-                        {% if key != 'top_suppliers' and key != 'food_categories' %}
+                        {% if key != 'top_suppliers' and key != 'food_categories' and key != 'rescued_by_category' and key != 'peak_rescue_times' %}
                         <div class="col-sm-6 col-lg-4">
                             <div class="p-3 border rounded bg-light">
                                 <small class="text-muted d-block">{{ key|format_metric_name }}</small>
@@ -115,7 +115,102 @@
                         </table>
                     </div>
                     {% endif %}
-
+                    
+                    {% if report.data.metrics.rescued_by_category %}
+                    <h6 class="mt-4 mb-3">Rescued By Category</h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Count</th>
+                                    <th>Total (kg)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for category in report.data.metrics.rescued_by_category %}
+                                <tr>
+                                    <td>{{ category.category }}</td>
+                                    <td>{{ category.count }}</td>
+                                    <td>{{ category.total_kg }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                    
+                    {% if report.data.metrics.peak_rescue_times %}
+                    <h6 class="mt-4 mb-3">Peak Rescue Times</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Peak Day</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p><strong>{{ report.data.metrics.peak_rescue_times.peak_day.day_name }}</strong> with {{ report.data.metrics.peak_rescue_times.peak_day.count }} rescues</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Peak Hour</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p><strong>{{ report.data.metrics.peak_rescue_times.peak_hour.formatted_hour }}</strong> with {{ report.data.metrics.peak_rescue_times.peak_hour.count }} rescues</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="mt-2 mb-3">Rescue Activity by Day</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Day</th>
+                                            <th>Rescues</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for day in report.data.metrics.peak_rescue_times.days %}
+                                        <tr>
+                                            <td>{{ day.day_name }}</td>
+                                            <td>{{ day.count }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="mt-2 mb-3">Rescue Activity by Hour</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Hour</th>
+                                            <th>Rescues</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for hour in report.data.metrics.peak_rescue_times.hours %}
+                                        <tr>
+                                            <td>{{ hour.formatted_hour }}</td>
+                                            <td>{{ hour.count }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
                     {% if report.data.daily_trends %}
                     <h6 class="mt-4 mb-3">Daily Trends</h6>
                     <div class="table-responsive">

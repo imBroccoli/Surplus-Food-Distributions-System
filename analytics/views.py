@@ -741,7 +741,8 @@ def report_list(request, report_type):
         "user-activity": "USER_ACTIVITY",
         "compliance": "COMPLIANCE",
         "system": "SYSTEM",
-        "supplier": "SUPPLIER",  # Add mapping for supplier report type
+        "supplier": "SUPPLIER",
+        "waste-reduction": "WASTE_REDUCTION",  # Add mapping for waste reduction report type
     }
 
     # Get the actual report type from the mapping
@@ -848,6 +849,7 @@ def generate_report(request):
                     "COMPLIANCE": Report.generate_compliance_report,
                     "SYSTEM": Report.generate_system_performance_report,
                     "SUPPLIER": Report.generate_supplier_performance_report,
+                    "WASTE_REDUCTION": Report.generate_waste_reduction_report,
                 }
 
                 # Get the generator function
@@ -921,6 +923,7 @@ def regenerate_report(request, report_id):
             "COMPLIANCE": Report.generate_compliance_report,
             "SYSTEM": Report.generate_system_performance_report,
             "SUPPLIER": Report.generate_supplier_performance_report,
+            "WASTE_REDUCTION": Report.generate_waste_reduction_report,
         }
         
         generator = generator_functions.get(report.report_type)
@@ -1022,13 +1025,40 @@ def schedule_report(request, report_id):
 def delete_report(request, report_id):
     """Delete a report"""
     report = get_object_or_404(Report, id=report_id)
+    
+    # Save the report type before deletion for redirect purposes
+    report_type = report.report_type.lower()
+    
     try:
         report.delete()
-        return JsonResponse(
-            {"status": "success", "message": "Report deleted successfully"}
-        )
+        
+        # Check if this is an AJAX request
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse(
+                {"status": "success", "message": "Report deleted successfully"}
+            )
+        
+        # For regular form submissions, add a message and redirect
+        sweetify.success(request, "Report deleted successfully", timer=3000)
+        
+        # Determine where to redirect based on where user was
+        if 'HTTP_REFERER' in request.META:
+            referring_path = request.META['HTTP_REFERER']
+            if 'report_detail' in referring_path:
+                # If coming from report detail, go to report list of that type
+                return redirect('analytics:report_list', report_type=report_type)
+            elif 'report_list' in referring_path:
+                # If coming from report list, go back to that list
+                return redirect('analytics:report_list', report_type=report_type)
+        
+        # Default redirect to reports dashboard
+        return redirect('analytics:reports_dashboard')
     except Exception as e:
-        return JsonResponse({"status": "error", "message": str(e)}, status=500)
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse({"status": "error", "message": str(e)}, status=500)
+        
+        sweetify.error(request, f"Error deleting report: {str(e)}", timer=5000)
+        return redirect('analytics:reports_dashboard')
 
 
 @login_required

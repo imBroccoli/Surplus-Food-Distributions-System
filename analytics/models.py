@@ -20,7 +20,7 @@ from django.db.models import (
     Value,
     Q,
 )
-from django.db.models.functions import Concat, TruncDay, Coalesce
+from django.db.models.functions import Concat, TruncDay, Coalesce, ExtractWeekDay, ExtractHour
 from django.db.utils import Error as DBError
 from django.http import HttpResponse
 from django.utils import timezone
@@ -523,6 +523,7 @@ class Report(BaseModel):
         ("COMPLIANCE", "Compliance Report"),
         ("SYSTEM", "System Performance Report"),
         ("SUPPLIER", "Supplier Performance Report"),
+        ("WASTE_REDUCTION", "Food Waste Reduction Report"),
     ]
 
     SCHEDULE_CHOICES = [
@@ -724,6 +725,7 @@ class Report(BaseModel):
                 "COMPLIANCE": self.__class__.generate_compliance_report,
                 "SYSTEM": self.__class__.generate_system_performance_report,
                 "SUPPLIER": self.__class__.generate_supplier_performance_report,
+                "WASTE_REDUCTION": self.__class__.generate_waste_reduction_report,
             }
             
             if self.report_type not in report_generators:
@@ -881,7 +883,7 @@ class Report(BaseModel):
                 formatted_metrics = {}
                 for key, value in report_data["metrics"].items():
                     # Skip nested data structures that will be shown in separate tables
-                    if key in ['top_suppliers', 'food_categories']:
+                    if key in ['top_suppliers', 'food_categories', 'rescued_by_category', 'peak_rescue_times']:
                         continue
                     
                     # Format metric name to be clearer
@@ -978,7 +980,7 @@ class Report(BaseModel):
                                 ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#bdc3c7")),
                                 ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f9f9f9")]),
                                 ("ALIGN", (1, 1), (1, -1), "RIGHT"),  # Right align transaction count
-                                ("ALIGN", (2, 1), (2, -1), "RIGHT"),  # Right align food total
+                                ("ALIGN", (2, 1), (2, -1), "RIGHT"),  # Right align total food
                             ])
                         )
                         elements.append(supplier_table)
@@ -1019,6 +1021,112 @@ class Report(BaseModel):
                         )
                         elements.append(category_table)
                         elements.append(Spacer(1, 20))
+                        
+                # Add rescued by category table if available (for waste reduction reports)
+                if 'rescued_by_category' in report_data["metrics"] and isinstance(report_data["metrics"]['rescued_by_category'], list):
+                    elements.append(Paragraph("Rescued By Category", styles["Heading2"]))
+                    elements.append(Spacer(1, 10))
+                    
+                    category_data = [
+                        ["Category", "Count", "Total (kg)"]
+                    ]
+                    
+                    for category in report_data["metrics"]['rescued_by_category']:
+                        if isinstance(category, dict):
+                            category_type = category.get('category', 'Unknown')
+                            count = str(category.get('count', 0))
+                            total_kg = "{:.1f}".format(float(category.get('total_kg', 0)))
+                            category_data.append([category_type, count, total_kg])
+                    
+                    if len(category_data) > 1:  # if we have data beyond just the header
+                        category_table = Table(category_data, colWidths=[200, 150, 150])
+                        category_table.setStyle(
+                            TableStyle([
+                                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#3498db")),
+                                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                                ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+                                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                                ("FONTSIZE", (0, 0), (-1, 0), 11),
+                                ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                                ("BACKGROUND", (0, 1), (-1, -1), colors.white),
+                                ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#bdc3c7")),
+                                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f9f9f9")]),
+                                ("ALIGN", (1, 1), (1, -1), "RIGHT"),  # Right align count
+                                ("ALIGN", (2, 1), (2, -1), "RIGHT"),  # Right align total kg
+                            ])
+                        )
+                        elements.append(category_table)
+                        elements.append(Spacer(1, 20))
+                
+                # Add peak rescue times if available (for waste reduction reports)
+                if 'peak_rescue_times' in report_data["metrics"] and isinstance(report_data["metrics"]['peak_rescue_times'], dict):
+                    peak_data = report_data["metrics"]['peak_rescue_times']
+                    elements.append(Paragraph("Peak Rescue Times", styles["Heading2"]))
+                    elements.append(Spacer(1, 10))
+                    
+                    # Create peak summary text
+                    peak_day = peak_data.get('peak_day', {})
+                    peak_hour = peak_data.get('peak_hour', {})
+                    
+                    if peak_day and peak_hour:
+                        peak_text = (
+                            f"Peak rescue day is {peak_day.get('day_name')} with {peak_day.get('count')} rescues. "
+                            f"Peak rescue hour is {peak_hour.get('formatted_hour')} with {peak_hour.get('count')} rescues."
+                        )
+                        elements.append(Paragraph(peak_text, styles["Normal"]))
+                        elements.append(Spacer(1, 15))
+                    
+                    # Create rescue activity by day table
+                    if 'days' in peak_data and peak_data['days']:
+                        elements.append(Paragraph("Rescue Activity by Day", styles["Heading3"]))
+                        elements.append(Spacer(1, 5))
+                        
+                        day_data = [["Day", "Rescues"]]
+                        for day in peak_data['days']:
+                            day_data.append([day.get('day_name', ''), str(day.get('count', 0))])
+                            
+                        day_table = Table(day_data, colWidths=[150, 100])
+                        day_table.setStyle(
+                            TableStyle([
+                                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#3498db")),
+                                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                                ("ALIGN", (0, 0), (-1, 0), "LEFT"),
+                                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                                ("FONTSIZE", (0, 0), (-1, 0), 10),
+                                ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+                                ("BACKGROUND", (0, 1), (-1, -1), colors.white),
+                                ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#bdc3c7")),
+                                ("ALIGN", (1, 1), (1, -1), "RIGHT"),  # Right align count
+                            ])
+                        )
+                        elements.append(day_table)
+                        elements.append(Spacer(1, 15))
+                        
+                    # Create rescue activity by hour table
+                    if 'hours' in peak_data and peak_data['hours']:
+                        elements.append(Paragraph("Rescue Activity by Hour", styles["Heading3"]))
+                        elements.append(Spacer(1, 5))
+                        
+                        hour_data = [["Hour", "Rescues"]]
+                        for hour in peak_data['hours']:
+                            hour_data.append([hour.get('formatted_hour', ''), str(hour.get('count', 0))])
+                            
+                        hour_table = Table(hour_data, colWidths=[150, 100])
+                        hour_table.setStyle(
+                            TableStyle([
+                                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#3498db")),
+                                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                                ("ALIGN", (0, 0), (-1, 0), "LEFT"),
+                                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                                ("FONTSIZE", (0, 0), (-1, 0), 10),
+                                ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+                                ("BACKGROUND", (0, 1), (-1, -1), colors.white),
+                                ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#bdc3c7")),
+                                ("ALIGN", (1, 1), (1, -1), "RIGHT"),  # Right align count
+                            ])
+                        )
+                        elements.append(hour_table)
+                        elements.append(Spacer(1, 20))
 
             # Format the daily trends table
             if (
@@ -1044,6 +1152,7 @@ class Report(BaseModel):
                             formatted_date = date_obj.strftime("%b %d, %Y")
                         else:
                             formatted_date = str(date_str)
+
                     except (ValueError, TypeError):
                         formatted_date = str(date_str)
 
@@ -1222,7 +1331,7 @@ class Report(BaseModel):
             # Handle all simple metrics (exclude nested structures)
             for key, value in report_data["metrics"].items():
                 # Skip complex nested structures - we'll handle them separately
-                if key in ['top_suppliers', 'food_categories']:
+                if key in ['top_suppliers', 'food_categories', 'rescued_by_category', 'peak_rescue_times']:
                     continue
                 
                 # Format numbers with commas for thousands and limit decimal places
@@ -1267,6 +1376,54 @@ class Report(BaseModel):
                         writer.writerow([listing_type, count, total_kg])
                 
                 writer.writerow([])  # Empty row for spacing
+                
+            # Format Rescued By Category table if available
+            if 'rescued_by_category' in report_data["metrics"] and isinstance(report_data["metrics"]['rescued_by_category'], list):
+                writer.writerow(["Rescued By Category"])
+                writer.writerow(["Category", "Count", "Total (kg)"])
+                
+                for category in report_data["metrics"]['rescued_by_category']:
+                    if isinstance(category, dict):
+                        category_type = category.get('category', 'Unknown')
+                        count = category.get('count', 0)
+                        total_kg = f"{float(category.get('total_kg', 0)):.1f}"
+                        writer.writerow([category_type, count, total_kg])
+                
+                writer.writerow([])  # Empty row for spacing
+                
+            # Format Peak Rescue Times if available
+            if 'peak_rescue_times' in report_data["metrics"] and isinstance(report_data["metrics"]['peak_rescue_times'], dict):
+                peak_data = report_data["metrics"]['peak_rescue_times']
+                writer.writerow(["Peak Rescue Times"])
+                
+                # Write peak summary
+                peak_day = peak_data.get('peak_day', {})
+                peak_hour = peak_data.get('peak_hour', {})
+                
+                if peak_day and peak_hour:
+                    writer.writerow(["Peak Day", f"{peak_day.get('day_name', 'Unknown')} ({peak_day.get('count', 0)} rescues)"])
+                    writer.writerow(["Peak Hour", f"{peak_hour.get('formatted_hour', 'Unknown')} ({peak_hour.get('count', 0)} rescues)"])
+                    writer.writerow([])  # Empty row for spacing
+                
+                # Write activity by day
+                if 'days' in peak_data and peak_data['days']:
+                    writer.writerow(["Rescue Activity by Day"])
+                    writer.writerow(["Day", "Rescues"])
+                    
+                    for day in peak_data['days']:
+                        writer.writerow([day.get('day_name', 'Unknown'), day.get('count', 0)])
+                    
+                    writer.writerow([])  # Empty row for spacing
+                
+                # Write activity by hour
+                if 'hours' in peak_data and peak_data['hours']:
+                    writer.writerow(["Rescue Activity by Hour"])
+                    writer.writerow(["Hour", "Rescues"])
+                    
+                    for hour in peak_data['hours']:
+                        writer.writerow([hour.get('formatted_hour', 'Unknown'), hour.get('count', 0)])
+                    
+                    writer.writerow([])  # Empty row for spacing
 
         if (
             report_data.get("daily_trends")
@@ -2095,6 +2252,72 @@ class Report(BaseModel):
             summary=summary
         )
 
+    @classmethod
+    def generate_waste_reduction_report(cls, start_date, end_date, user, title=None):
+        """Generate food waste reduction report for the specified date range"""
+        
+        # Get listings that were successfully rescued (completed transactions)
+        rescued_listings = Transaction.objects.filter(
+            status="COMPLETED",
+            completion_date__date__range=[start_date, end_date]
+        )
+        
+        # Calculate total food rescued
+        total_food_rescued = rescued_listings.aggregate(
+            total_kg=Sum('request__quantity_requested')
+        )['total_kg'] or 0
+        
+        # Calculate average time to rescue
+        avg_rescue_time = calculate_avg_rescue_time(start_date, end_date)
+        
+        # Get rescued food by category
+        rescued_by_category = get_rescued_food_by_category(start_date, end_date)
+        
+        # Analyze peak rescue times
+        peak_rescue_times = analyze_peak_rescue_times(start_date, end_date)
+        
+        # Get daily waste reduction trend
+        waste_reduction_trend = get_waste_reduction_trend(start_date, end_date)
+        
+        # Calculate economic value and environmental impact
+        economic_value = float(total_food_rescued) * 3.0  # $3 per kg food on average
+        co2_saved = float(total_food_rescued) * 2.5  # 2.5 kg CO2 per kg food saved
+        
+        # Compile metrics
+        metrics = {
+            "total_food_rescued_kg": float(total_food_rescued),
+            "avg_time_to_rescue_hours": float(avg_rescue_time),
+            "total_successful_rescues": rescued_listings.count(),
+            "economic_value_saved": float(economic_value),
+            "co2_saved_kg": float(co2_saved),
+            "rescued_by_category": rescued_by_category,
+            "peak_rescue_times": peak_rescue_times,
+        }
+        
+        # Create report data structure
+        report_data = {
+            "metrics": metrics,
+            "daily_trends": waste_reduction_trend
+        }
+        
+        # Create summary text
+        summary = (
+            f"Total food rescued: {metrics['total_food_rescued_kg']:.1f}kg, "
+            f"CO2 saved: {metrics['co2_saved_kg']:.1f}kg, "
+            f"Economic value: ${metrics['economic_value_saved']:.2f}, "
+            f"Avg rescue time: {metrics['avg_time_to_rescue_hours']:.1f} hours"
+        )
+        
+        return cls.objects.create(
+            title=title or f"Food Waste Reduction Report {start_date} to {end_date}",
+            report_type="WASTE_REDUCTION",
+            date_range_start=start_date,
+            date_range_end=end_date,
+            generated_by=user,
+            data=report_data,
+            summary=summary
+        )
+
 
 def calculate_supplier_reliability(start_date, end_date):
     """Calculate supplier reliability as percentage of successful transactions"""
@@ -2244,3 +2467,149 @@ def get_delivery_performance(start_date, end_date):
         return 0.0
     
     return (on_time_deliveries / total_deliveries) * 100
+
+
+def calculate_avg_rescue_time(start_date, end_date):
+    """Calculate average time from listing creation to rescue (completion) in hours"""
+    # Get completed transactions within the date range
+    completed_transactions = Transaction.objects.filter(
+        status="COMPLETED",
+        completion_date__date__range=[start_date, end_date]
+    ).select_related('request__listing')
+    
+    if not completed_transactions.exists():
+        return 0
+    
+    # Calculate time difference for each transaction
+    total_hours = 0
+    count = 0
+    
+    for transaction in completed_transactions:
+        if transaction.request and transaction.request.listing:
+            listing_created = transaction.request.listing.created_at
+            transaction_completed = transaction.completion_date
+            
+            # Calculate time difference in hours
+            if listing_created and transaction_completed:
+                time_diff = (transaction_completed - listing_created).total_seconds() / 3600
+                
+                # Only count reasonable values (avoid negative or extremely large values)
+                if 0 <= time_diff <= 72:  # Limit to 3 days to avoid outliers
+                    total_hours += time_diff
+                    count += 1
+    
+    # Return average or 0 if no valid data
+    return round(total_hours / count, 2) if count > 0 else 0
+
+
+def get_rescued_food_by_category(start_date, end_date):
+    """Get breakdown of rescued food by category (using listing_type since food_category doesn't exist)"""
+    # Get all food categories with successful transactions
+    rescued_categories = Transaction.objects.filter(
+        status="COMPLETED",
+        completion_date__date__range=[start_date, end_date]
+    ).values(
+        'request__listing__listing_type'  # Changed from food_category to listing_type
+    ).annotate(
+        total_kg=Sum('request__quantity_requested'),
+        count=Count('id')
+    ).order_by('-total_kg')
+    
+    # Format results
+    categories = []
+    for category in rescued_categories:
+        categories.append({
+            'category': category['request__listing__listing_type'],  # Changed from food_category to listing_type
+            'total_kg': float(category['total_kg'] or 0),
+            'count': category['count'],
+        })
+    
+    return categories
+
+
+def analyze_peak_rescue_times(start_date, end_date):
+    """Analyze what days and times have the most rescue activity"""
+    # Get transactions by day of week
+    transactions_by_day = Transaction.objects.filter(
+        status="COMPLETED",
+        completion_date__date__range=[start_date, end_date]
+    ).annotate(
+        day_of_week=ExtractWeekDay('completion_date')
+    ).values('day_of_week').annotate(
+        count=Count('id')
+    ).order_by('day_of_week')
+    
+    # Get transactions by hour
+    transactions_by_hour = Transaction.objects.filter(
+        status="COMPLETED",
+        completion_date__date__range=[start_date, end_date]
+    ).annotate(
+        hour=ExtractHour('completion_date')
+    ).values('hour').annotate(
+        count=Count('id')
+    ).order_by('hour')
+    
+    # Format results
+    days = []
+    for day in transactions_by_day:
+        days.append({
+            'day_of_week': day['day_of_week'],
+            'day_name': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][day['day_of_week'] % 7],
+            'count': day['count'],
+        })
+    
+    hours = []
+    for hour_data in transactions_by_hour:
+        hour = hour_data['hour']
+        hours.append({
+            'hour': hour,
+            'formatted_hour': f"{hour}:00",
+            'count': hour_data['count'],
+        })
+    
+    return {
+        'days': days,
+        'hours': hours,
+        'peak_day': max(days, key=lambda x: x['count']) if days else None,
+        'peak_hour': max(hours, key=lambda x: x['count']) if hours else None,
+    }
+
+
+def get_waste_reduction_trend(start_date, end_date):
+    """Get daily trend of waste reduction over the specified period"""
+    # Get daily total rescued food
+    daily_totals = Transaction.objects.filter(
+        status="COMPLETED",
+        completion_date__date__range=[start_date, end_date]
+    ).annotate(
+        date=TruncDay('completion_date')
+    ).values('date').annotate(
+        food_saved=Sum('request__quantity_requested')
+    ).order_by('date')
+    
+    # Format results
+    trend = []
+    running_total = 0
+    
+    # Create a complete date range (including days with no rescues)
+    date_range = []
+    current_date = start_date
+    while current_date <= end_date:
+        date_range.append(current_date)
+        current_date += timezone.timedelta(days=1)
+    
+    # Fill in the trend data
+    for current_date in date_range:
+        # Find data for this date, if it exists
+        day_data = next((day for day in daily_totals if day['date'].date() == current_date), None)
+        
+        daily_amount = float(day_data['food_saved'] if day_data else 0)
+        running_total += daily_amount
+        
+        trend.append({
+            'date': current_date.strftime('%Y-%m-%d'),
+            'daily_amount': daily_amount,
+            'cumulative_amount': running_total,
+        })
+    
+    return trend
