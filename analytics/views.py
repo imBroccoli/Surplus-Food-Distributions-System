@@ -741,6 +741,7 @@ def report_list(request, report_type):
         "user-activity": "USER_ACTIVITY",
         "compliance": "COMPLIANCE",
         "system": "SYSTEM",
+        "supplier": "SUPPLIER",  # Add mapping for supplier report type
     }
 
     # Get the actual report type from the mapping
@@ -846,6 +847,7 @@ def generate_report(request):
                     "USER_ACTIVITY": Report.generate_user_activity_report,
                     "COMPLIANCE": Report.generate_compliance_report,
                     "SYSTEM": Report.generate_system_performance_report,
+                    "SUPPLIER": Report.generate_supplier_performance_report,
                 }
 
                 # Get the generator function
@@ -918,6 +920,7 @@ def regenerate_report(request, report_id):
             "USER_ACTIVITY": Report.generate_user_activity_report,
             "COMPLIANCE": Report.generate_compliance_report,
             "SYSTEM": Report.generate_system_performance_report,
+            "SUPPLIER": Report.generate_supplier_performance_report,
         }
         
         generator = generator_functions.get(report.report_type)

@@ -55,3 +55,25 @@ def absolute(value):
         return abs(float(value))
     except (ValueError, TypeError):
         return 0
+
+
+@register.filter
+def format_metric_name(value):
+    """Format metric name by replacing underscores with spaces and title casing"""
+    if not value:
+        return ""
+    return value.replace("_", " ").title()
+
+
+@register.filter
+def format_metric_value(value):
+    """Format numeric values with appropriate decimal places"""
+    try:
+        float_val = float(value)
+        # If it's a whole number, display without decimals
+        if float_val == int(float_val):
+            return floatformat(float_val, 0)
+        # Otherwise format with 1 decimal place
+        return floatformat(float_val, 1)
+    except (ValueError, TypeError):
+        return value

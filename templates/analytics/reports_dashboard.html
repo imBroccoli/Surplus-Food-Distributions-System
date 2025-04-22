@@ -3,6 +3,30 @@
 
 {% block title %}Analytics Reports - Surplus Food Distribution{% endblock %}
 
+{% block extra_head %}
+<!-- Custom styles for Indigo color class -->
+<style>
+.bg-indigo {
+    background-color: #6610f2 !important;
+}
+.text-indigo {
+    color: #6610f2 !important;
+}
+.btn-outline-indigo {
+    color: #6610f2;
+    border-color: #6610f2;
+}
+.btn-outline-indigo:hover {
+    color: #fff;
+    background-color: #6610f2;
+    border-color: #6610f2;
+}
+.bg-indigo.bg-opacity-10 {
+    background-color: rgba(102, 16, 242, 0.1) !important;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid py-4">
     <!-- Header -->
@@ -151,6 +175,28 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Supplier Performance Reports -->
+        <div class="col-sm-6 col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="flex-shrink-0">
+                            <div class="rounded-circle p-3 bg-indigo bg-opacity-10">
+                                <i class="fas fa-boxes fa-fw text-indigo"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h5 class="mb-1">Supplier Reports</h5>
+                            <p class="text-muted small mb-0">Supplier performance and reliability analysis</p>
+                        </div>
+                    </div>
+                    <a href="{% url 'analytics:report_list' 'supplier' %}" class="btn btn-outline-primary w-100">
+                        View Reports
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Recent Reports -->
@@ -179,6 +225,7 @@
                                     {% elif report.report_type == 'TRANSACTION' %}bg-success
                                     {% elif report.report_type == 'USER_ACTIVITY' %}bg-info
                                     {% elif report.report_type == 'COMPLIANCE' %}bg-warning
+                                    {% elif report.report_type == 'SUPPLIER' %}bg-indigo
                                     {% else %}bg-danger{% endif %}">
                                     {{ report.get_report_type_display }}
                                 </span>
@@ -299,6 +346,7 @@
                                     {% elif report.report_type == 'TRANSACTION' %}bg-success
                                     {% elif report.report_type == 'USER_ACTIVITY' %}bg-info
                                     {% elif report.report_type == 'COMPLIANCE' %}bg-warning
+                                    {% elif report.report_type == 'SUPPLIER' %}bg-indigo
                                     {% else %}bg-danger{% endif %}">
                                     {{ report.get_report_type_display }}
                                 </span>
@@ -521,6 +569,7 @@ function loadReports(page) {
                     if (report.report_type === 'TRANSACTION') badgeClass = 'bg-success';
                     else if (report.report_type === 'USER_ACTIVITY') badgeClass = 'bg-info';
                     else if (report.report_type === 'COMPLIANCE') badgeClass = 'bg-warning';
+                    else if (report.report_type === 'SUPPLIER') badgeClass = 'bg-indigo';
                     else if (report.report_type === 'SYSTEM') badgeClass = 'bg-danger';
                     
                     rows += `

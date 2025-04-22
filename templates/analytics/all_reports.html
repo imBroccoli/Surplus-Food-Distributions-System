@@ -117,6 +117,7 @@
                                         {% elif report.report_type == 'TRANSACTION' %}bg-success
                                         {% elif report.report_type == 'USER_ACTIVITY' %}bg-info
                                         {% elif report.report_type == 'COMPLIANCE' %}bg-warning
+                                        {% elif report.report_type == 'SUPPLIER' %}bg-indigo
                                         {% else %}bg-danger{% endif %}">
                                         {{ report.get_report_type_display }}
                                     </span>

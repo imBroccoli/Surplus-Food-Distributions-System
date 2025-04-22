@@ -18,7 +18,9 @@ from django.db.models import (
     Case,
     When,
     Value,
+    Q,
 )
+from django.db.models.functions import Concat, TruncDay, Coalesce
 from django.db.utils import Error as DBError
 from django.http import HttpResponse
 from django.utils import timezone
@@ -520,6 +522,7 @@ class Report(BaseModel):
         ("USER_ACTIVITY", "User Activity Report"),
         ("COMPLIANCE", "Compliance Report"),
         ("SYSTEM", "System Performance Report"),
+        ("SUPPLIER", "Supplier Performance Report"),
     ]
 
     SCHEDULE_CHOICES = [
@@ -720,6 +723,7 @@ class Report(BaseModel):
                 "USER_ACTIVITY": self.__class__.generate_user_activity_report,
                 "COMPLIANCE": self.__class__.generate_compliance_report,
                 "SYSTEM": self.__class__.generate_system_performance_report,
+                "SUPPLIER": self.__class__.generate_supplier_performance_report,
             }
             
             if self.report_type not in report_generators:
@@ -873,21 +877,32 @@ class Report(BaseModel):
                     ]
                 ]
 
-                # Format metrics data
+                # Format metrics data - exclude nested structures
+                formatted_metrics = {}
                 for key, value in report_data["metrics"].items():
+                    # Skip nested data structures that will be shown in separate tables
+                    if key in ['top_suppliers', 'food_categories']:
+                        continue
+                    
                     # Format metric name to be clearer
                     formatted_key = key.replace("_", " ").title()
+                    
+                    # Format numeric values with proper decimal places
                     if isinstance(value, (int, float)):
-                        formatted_value = (
-                            "{:,.2f}".format(value)
-                            if isinstance(value, float)
-                            else "{:,}".format(value)
-                        )
+                        if float(value) == int(float(value)):  # whole number
+                            formatted_value = "{:,}".format(int(value))
+                        else:
+                            formatted_value = "{:,.1f}".format(float(value))
                     else:
                         formatted_value = str(value)
-                    metrics_data.append([formatted_key, formatted_value])
+                        
+                    formatted_metrics[formatted_key] = formatted_value
 
-                if metrics_data:
+                # Add formatted metrics to table
+                for key, value in formatted_metrics.items():
+                    metrics_data.append([key, value])
+
+                if len(metrics_data) > 1:  # if we have data beyond just the header
                     table = Table(metrics_data, colWidths=[250, 250])
                     table.setStyle(
                         TableStyle(
@@ -932,6 +947,78 @@ class Report(BaseModel):
                     )
                     elements.append(table)
                     elements.append(Spacer(1, 20))
+                    
+                # Add top suppliers table if available
+                if 'top_suppliers' in report_data["metrics"] and isinstance(report_data["metrics"]['top_suppliers'], list):
+                    elements.append(Paragraph("Top Suppliers", styles["Heading2"]))
+                    elements.append(Spacer(1, 10))
+                    
+                    supplier_data = [
+                        ["Supplier", "Transaction Count", "Total Food (kg)"]
+                    ]
+                    
+                    for supplier in report_data["metrics"]['top_suppliers']:
+                        if isinstance(supplier, dict):
+                            supplier_name = supplier.get('supplier_name', 'Unknown')
+                            transaction_count = str(supplier.get('transaction_count', 0))
+                            total_food = "{:.1f}".format(float(supplier.get('total_food_kg', 0)))
+                            supplier_data.append([supplier_name, transaction_count, total_food])
+                    
+                    if len(supplier_data) > 1:  # if we have data beyond just the header
+                        supplier_table = Table(supplier_data, colWidths=[200, 150, 150])
+                        supplier_table.setStyle(
+                            TableStyle([
+                                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#3498db")),
+                                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                                ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+                                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                                ("FONTSIZE", (0, 0), (-1, 0), 11),
+                                ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                                ("BACKGROUND", (0, 1), (-1, -1), colors.white),
+                                ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#bdc3c7")),
+                                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f9f9f9")]),
+                                ("ALIGN", (1, 1), (1, -1), "RIGHT"),  # Right align transaction count
+                                ("ALIGN", (2, 1), (2, -1), "RIGHT"),  # Right align food total
+                            ])
+                        )
+                        elements.append(supplier_table)
+                        elements.append(Spacer(1, 20))
+                
+                # Add food categories table if available
+                if 'food_categories' in report_data["metrics"] and isinstance(report_data["metrics"]['food_categories'], list):
+                    elements.append(Paragraph("Food Categories", styles["Heading2"]))
+                    elements.append(Spacer(1, 10))
+                    
+                    category_data = [
+                        ["Category", "Count", "Total (kg)"]
+                    ]
+                    
+                    for category in report_data["metrics"]['food_categories']:
+                        if isinstance(category, dict):
+                            category_type = category.get('listing_type', 'Unknown')
+                            count = str(category.get('count', 0))
+                            total_kg = "{:.1f}".format(float(category.get('total_kg', 0)))
+                            category_data.append([category_type, count, total_kg])
+                    
+                    if len(category_data) > 1:  # if we have data beyond just the header
+                        category_table = Table(category_data, colWidths=[200, 150, 150])
+                        category_table.setStyle(
+                            TableStyle([
+                                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#3498db")),
+                                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                                ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+                                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                                ("FONTSIZE", (0, 0), (-1, 0), 11),
+                                ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                                ("BACKGROUND", (0, 1), (-1, -1), colors.white),
+                                ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#bdc3c7")),
+                                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f9f9f9")]),
+                                ("ALIGN", (1, 1), (1, -1), "RIGHT"),  # Right align count
+                                ("ALIGN", (2, 1), (2, -1), "RIGHT"),  # Right align total kg
+                            ])
+                        )
+                        elements.append(category_table)
+                        elements.append(Spacer(1, 20))
 
             # Format the daily trends table
             if (
@@ -1126,22 +1213,60 @@ class Report(BaseModel):
         # Write data sections
         report_data = self.data if isinstance(self.data, dict) else {}
 
+        # Process metrics dictionary
+        metrics_to_write = {}
         if report_data.get("metrics") and isinstance(report_data["metrics"], dict):
             writer.writerow(["Key Metrics"])
-            writer.writerow(["Metric", "Value"])  # Column Header Columns
+            writer.writerow(["Metric", "Value"])  # Column Headers
+            
+            # Handle all simple metrics (exclude nested structures)
             for key, value in report_data["metrics"].items():
-                # Format numbers with commas for thousands
+                # Skip complex nested structures - we'll handle them separately
+                if key in ['top_suppliers', 'food_categories']:
+                    continue
+                
+                # Format numbers with commas for thousands and limit decimal places
                 if isinstance(value, (int, float)):
-                    formatted_value = (
-                        "{:,.2f}".format(value)
-                        if isinstance(value, float)
-                        else "{:,}".format(value)
-                    )
+                    if value == int(value):
+                        formatted_value = f"{int(value):,}"
+                    else:
+                        formatted_value = f"{value:.1f}"
                 else:
-                    formatted_value = value
-                writer.writerow([key.title(), formatted_value])
+                    formatted_value = str(value)
+                
+                # Format key to be more readable
+                formatted_key = key.replace("_", " ").title()
+                writer.writerow([formatted_key, formatted_value])
 
             writer.writerow([])  # Empty row for spacing
+            
+            # Format Top Suppliers table if available
+            if 'top_suppliers' in report_data["metrics"] and isinstance(report_data["metrics"]['top_suppliers'], list):
+                writer.writerow(["Top Suppliers"])
+                writer.writerow(["Supplier", "Transaction Count", "Total Food (kg)"])
+                
+                for supplier in report_data["metrics"]['top_suppliers']:
+                    if isinstance(supplier, dict):
+                        supplier_name = supplier.get('supplier_name', 'Unknown')
+                        transaction_count = supplier.get('transaction_count', 0)
+                        total_food_kg = f"{float(supplier.get('total_food_kg', 0)):.1f}"
+                        writer.writerow([supplier_name, transaction_count, total_food_kg])
+                
+                writer.writerow([])  # Empty row for spacing
+            
+            # Format Food Categories table if available
+            if 'food_categories' in report_data["metrics"] and isinstance(report_data["metrics"]['food_categories'], list):
+                writer.writerow(["Food Categories"])
+                writer.writerow(["Category", "Count", "Total (kg)"])
+                
+                for category in report_data["metrics"]['food_categories']:
+                    if isinstance(category, dict):
+                        listing_type = category.get('listing_type', 'Unknown')
+                        count = category.get('count', 0)
+                        total_kg = f"{float(category.get('total_kg', 0)):.1f}"
+                        writer.writerow([listing_type, count, total_kg])
+                
+                writer.writerow([])  # Empty row for spacing
 
         if (
             report_data.get("daily_trends")
@@ -1152,7 +1277,7 @@ class Report(BaseModel):
 
             # Write headers for trends
             first_day = report_data["daily_trends"][0]
-            headers = ["Date"] + [key for key in first_day.keys() if key != "date"]
+            headers = ["Date"] + [key.replace('_', ' ').title() for key in first_day.keys() if key != "date"]
             writer.writerow(headers)
 
             # Write data rows
@@ -1173,9 +1298,10 @@ class Report(BaseModel):
                     if key != "date":
                         value = day.get(key, "")
                         if isinstance(value, float):
-                            formatted_value = "{:,.2f}".format(value)
+                            # Format floating point numbers with 1 decimal place
+                            formatted_value = f"{value:.1f}"
                         elif isinstance(value, int):
-                            formatted_value = "{:,}".format(value)
+                            formatted_value = f"{value:,}"
                         else:
                             formatted_value = value
                         row.append(formatted_value)
@@ -1854,3 +1980,267 @@ class Report(BaseModel):
             data=report_data,
             summary=f"Avg completion rate: {metrics['avg_transaction_completion']:.1f}%, Response time: {metrics['avg_response_time']:.2f}s, Active users: {metrics['total_active_users']}",
         )
+
+    @classmethod
+    def generate_supplier_performance_report(cls, start_date, end_date, user, title=None):
+        """Generate supplier performance report for the specified date range"""
+        
+        # Get supplier data from transactions
+        User = get_user_model()
+        suppliers = User.objects.filter(
+            user_type="BUSINESS",
+            food_listings__created_at__date__range=[start_date, end_date]
+        ).distinct()
+        
+        # Calculate key metrics
+        supplier_reliability = calculate_supplier_reliability(start_date, end_date)
+        supplier_growth = calculate_supplier_growth(start_date, end_date)
+        top_suppliers = get_top_suppliers(start_date, end_date)
+        food_categories = get_food_categories_by_supplier(start_date, end_date)
+        avg_quality_rating = calculate_avg_quality_rating_by_supplier(start_date, end_date)
+        on_time_delivery = get_delivery_performance(start_date, end_date)
+        
+        # Process suppliers' transaction data
+        supplier_transactions = Transaction.objects.filter(
+            request__listing__supplier__user_type="BUSINESS",
+            transaction_date__date__range=[start_date, end_date]
+        )
+        
+        total_food_volume = supplier_transactions.filter(
+            status="COMPLETED"
+        ).aggregate(
+            total_kg=Sum('request__quantity_requested')
+        )['total_kg'] or 0
+        
+        # Get daily metrics for trends
+        daily_metrics = list(
+            Transaction.objects.filter(
+                request__listing__supplier__user_type="BUSINESS",
+                transaction_date__date__range=[start_date, end_date]
+            ).annotate(date=TruncDay('transaction_date'))
+            .values('date')
+            .annotate(
+                daily_volume=Sum('request__quantity_requested', filter=Q(status="COMPLETED")),
+                daily_transactions=Count('id'),
+                completed_transactions=Count('id', filter=Q(status="COMPLETED"))
+            ).order_by('date')
+        )
+        
+        # Format daily metrics
+        formatted_daily_metrics = []
+        for metric in daily_metrics:
+            success_rate = 0
+            if metric['daily_transactions'] > 0:
+                success_rate = (metric['completed_transactions'] / metric['daily_transactions']) * 100
+                
+            formatted_metric = {
+                'date': metric['date'].strftime('%Y-%m-%d'),
+                'food_volume': float(metric['daily_volume'] or 0),
+                'transactions': metric['daily_transactions'],
+                'success_rate': float(success_rate),
+            }
+            formatted_daily_metrics.append(formatted_metric)
+        
+        # If no data, provide empty placeholder
+        if not formatted_daily_metrics:
+            formatted_daily_metrics = [{
+                'date': start_date.strftime('%Y-%m-%d'),
+                'food_volume': 0,
+                'transactions': 0,
+                'success_rate': 0,
+            }]
+        
+        # Compile all metrics
+        metrics = {
+            "total_suppliers": suppliers.count(),
+            # Count distinct suppliers with completed transactions in the date range
+            "active_suppliers": Transaction.objects.filter(
+                request__listing__supplier__user_type="BUSINESS",
+                transaction_date__date__range=[start_date, end_date],
+                status="COMPLETED",
+            ).values("request__listing__supplier").distinct().count(),
+            "total_food_volume": float(total_food_volume),
+            "supplier_reliability": float(supplier_reliability),
+            "supplier_growth": float(supplier_growth),
+            "avg_quality_rating": float(avg_quality_rating),
+            "on_time_delivery_rate": float(on_time_delivery),
+            "top_suppliers": top_suppliers,
+            "food_categories": food_categories,
+        }
+        
+        # Create report data structure
+        report_data = {
+            "metrics": metrics,
+            "daily_trends": formatted_daily_metrics
+        }
+        # Normalize data to valid JSON by round-tripping through json
+        import json
+        report_data = json.loads(json.dumps(report_data))
+        
+        # Create summary text
+        summary = (
+            f"Total active suppliers: {metrics['active_suppliers']}, "
+            f"Total food volume: {metrics['total_food_volume']:.1f}kg, "
+            f"Avg reliability: {metrics['supplier_reliability']:.1f}%, "
+            f"Quality rating: {metrics['avg_quality_rating']:.1f}/5"
+        )
+        
+        return cls.objects.create(
+            title=title or f"Supplier Performance Report {start_date} to {end_date}",
+            report_type="SUPPLIER",
+            date_range_start=start_date,
+            date_range_end=end_date,
+            generated_by=user,
+            data=report_data,
+            summary=summary
+        )
+
+
+def calculate_supplier_reliability(start_date, end_date):
+    """Calculate supplier reliability as percentage of successful transactions"""
+    suppliers_data = Transaction.objects.filter(
+        request__listing__supplier__user_type="BUSINESS",
+        transaction_date__date__range=[start_date, end_date]
+    ).values('request__listing__supplier').annotate(
+        total_transactions=Count('id'),
+        completed_transactions=Count('id', filter=Q(status="COMPLETED"))
+    )
+    
+    if not suppliers_data:
+        return 0.0
+    
+    # Calculate overall reliability across all suppliers
+    total_transactions = sum(data['total_transactions'] for data in suppliers_data)
+    completed_transactions = sum(data['completed_transactions'] for data in suppliers_data)
+    
+    if total_transactions == 0:
+        return 0.0
+    
+    return (completed_transactions / total_transactions) * 100
+
+
+def get_top_suppliers(start_date, end_date, limit=5):
+    """Get top suppliers by transaction volume"""
+    suppliers = Transaction.objects.filter(
+        request__listing__supplier__user_type="BUSINESS",
+        transaction_date__date__range=[start_date, end_date],
+        status="COMPLETED"
+    ).values(
+        'request__listing__supplier__id',
+        'request__listing__supplier__email',
+        'request__listing__supplier__first_name',
+        'request__listing__supplier__last_name'
+    ).annotate(
+        transaction_count=Count('id'),
+        total_food_kg=Sum('request__quantity_requested')
+    ).order_by('-transaction_count')[:limit]
+
+    # Post-process to create supplier name after the query
+    result = []
+    for supplier in suppliers:
+        first_name = supplier.get('request__listing__supplier__first_name', '')
+        last_name = supplier.get('request__listing__supplier__last_name', '')
+        email = supplier.get('request__listing__supplier__email', '')
+        
+        # Use full name if available, otherwise use email
+        if first_name and last_name:
+            supplier_name = f"{first_name} {last_name}"
+        else:
+            supplier_name = email
+            
+        result.append({
+            'supplier_id': supplier['request__listing__supplier__id'],
+            'supplier_name': supplier_name,
+            'transaction_count': supplier['transaction_count'],
+            'total_food_kg': float(supplier['total_food_kg'] if supplier['total_food_kg'] else 0)
+        })
+        
+    return result
+
+
+def calculate_supplier_growth(start_date, end_date):
+    """Calculate supplier growth over the period"""
+    # Get the midpoint of the date range to compare first half vs second half
+    date_range = (end_date - start_date).days
+    if date_range <= 1:
+        return 0.0
+    
+    midpoint = start_date + timedelta(days=date_range // 2)
+    
+    # Count active suppliers in first half
+    first_half_suppliers = Transaction.objects.filter(
+        request__listing__supplier__user_type="BUSINESS",
+        transaction_date__date__range=[start_date, midpoint]
+    ).values('request__listing__supplier').distinct().count()
+    
+    # Count active suppliers in second half
+    second_half_suppliers = Transaction.objects.filter(
+        request__listing__supplier__user_type="BUSINESS",
+        transaction_date__date__range=[midpoint + timedelta(days=1), end_date]
+    ).values('request__listing__supplier').distinct().count()
+    
+    if first_half_suppliers == 0:
+        return 100.0 if second_half_suppliers > 0 else 0.0
+    
+    growth_rate = ((second_half_suppliers - first_half_suppliers) / first_half_suppliers) * 100
+    return growth_rate
+
+
+def get_food_categories_by_supplier(start_date, end_date):
+    """Get most popular listing types supplied by suppliers"""
+    qs = (
+        Transaction.objects.filter(
+            request__listing__supplier__user_type="BUSINESS",
+            transaction_date__date__range=[start_date, end_date],
+            status="COMPLETED",
+        )
+        .values('request__listing__listing_type')
+        .annotate(
+            count=Count('id'),
+            total_kg=Sum('request__quantity_requested'),
+        )
+        .order_by('-count')[:10]
+    )
+    # Convert Decimal to float for JSON serialization
+    result = []
+    for rec in qs:
+        result.append({
+            'listing_type': rec['request__listing__listing_type'],
+            'count': rec['count'],
+            'total_kg': float(rec['total_kg'] or 0),
+        })
+    return result
+
+
+def calculate_avg_quality_rating_by_supplier(start_date, end_date):
+    """Calculate average quality rating for suppliers"""
+    return Rating.objects.filter(
+        transaction__request__listing__supplier__user_type="BUSINESS",
+        transaction__completion_date__date__range=[start_date, end_date]
+    ).aggregate(avg_rating=Avg('rating'))['avg_rating'] or 0.0
+
+
+def get_delivery_performance(start_date, end_date):
+    """Calculate on-time delivery performance"""
+    total_deliveries = DeliveryAssignment.objects.filter(
+        transaction__request__listing__supplier__user_type="BUSINESS",
+        created_at__date__range=[start_date, end_date],
+        status="DELIVERED"
+    ).count()
+    
+    # Consider a delivery on-time if delivered within 24 hours of assignment
+    on_time_deliveries = DeliveryAssignment.objects.filter(
+        transaction__request__listing__supplier__user_type="BUSINESS",
+        created_at__date__range=[start_date, end_date],
+        status="DELIVERED"
+    ).annotate(
+        delivery_time=ExpressionWrapper(
+            F('delivered_at') - F('created_at'),
+            output_field=models.DurationField()
+        )
+    ).filter(delivery_time__lte=timedelta(hours=24)).count()
+    
+    if total_deliveries == 0:
+        return 0.0
+    
+    return (on_time_deliveries / total_deliveries) * 100

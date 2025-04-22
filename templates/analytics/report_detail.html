@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load humanize %}
+{% load analytics_filters %}
 
 {% block title %}{{ report.title }} - Report Detail{% endblock %}
 
@@ -55,13 +56,63 @@
                     <h6 class="mb-3">Key Metrics</h6>
                     <div class="row g-3">
                         {% for key, value in report.data.metrics.items %}
+                        {% if key != 'top_suppliers' and key != 'food_categories' %}
                         <div class="col-sm-6 col-lg-4">
                             <div class="p-3 border rounded bg-light">
-                                <small class="text-muted d-block">{{ key|title }}</small>
-                                <strong>{{ value }}</strong>
+                                <small class="text-muted d-block">{{ key|format_metric_name }}</small>
+                                <strong>{{ value|format_metric_value }}</strong>
                             </div>
                         </div>
+                        {% endif %}
                         {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% if report.data.metrics.top_suppliers %}
+                    <h6 class="mt-4 mb-3">Top Suppliers</h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Supplier</th>
+                                    <th>Transaction Count</th>
+                                    <th>Total Food (kg)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for supplier in report.data.metrics.top_suppliers %}
+                                <tr>
+                                    <td>{{ supplier.supplier_name }}</td>
+                                    <td>{{ supplier.transaction_count }}</td>
+                                    <td>{{ supplier.total_food_kg }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+
+                    {% if report.data.metrics.food_categories %}
+                    <h6 class="mt-4 mb-3">Food Categories</h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Count</th>
+                                    <th>Total (kg)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for category in report.data.metrics.food_categories %}
+                                <tr>
+                                    <td>{{ category.listing_type }}</td>
+                                    <td>{{ category.count }}</td>
+                                    <td>{{ category.total_kg }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                     {% endif %}
 
@@ -74,7 +125,7 @@
                                     <th>Date</th>
                                     {% for key in report.data.daily_trends.0.keys %}
                                     {% if key != 'date' %}
-                                    <th>{{ key|title }}</th>
+                                    <th>{{ key|format_metric_name }}</th>
                                     {% endif %}
                                     {% endfor %}
                                 </tr>
@@ -85,7 +136,7 @@
                                     <td>{{ day.date }}</td>
                                     {% for key, value in day.items %}
                                     {% if key != 'date' %}
-                                    <td>{{ value }}</td>
+                                    <td>{{ value|format_metric_value }}</td>
                                     {% endif %}
                                     {% endfor %}
                                 </tr>
