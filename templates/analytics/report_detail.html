@@ -56,13 +56,24 @@
                     <h6 class="mb-3">Key Metrics</h6>
                     <div class="row g-3">
                         {% for key, value in report.data.metrics.items %}
-                        {% if key != 'top_suppliers' and key != 'food_categories' and key != 'rescued_by_category' and key != 'peak_rescue_times' %}
-                        <div class="col-sm-6 col-lg-4">
-                            <div class="p-3 border rounded bg-light">
-                                <small class="text-muted d-block">{{ key|format_metric_name }}</small>
-                                <strong>{{ value|format_metric_value }}</strong>
-                            </div>
-                        </div>
+                        {% if report.report_type == 'BENEFICIARY' %}
+                            {% if key != 'top_suppliers' and key != 'food_categories' and key != 'rescued_by_category' and key != 'peak_rescue_times' and key != 'nutritional_value' and key != 'satisfaction_metrics' and key != 'food_by_beneficiary_type' %}
+                                <div class="col-sm-6 col-lg-4">
+                                    <div class="p-3 border rounded bg-light">
+                                        <small class="text-muted d-block">{{ key|format_metric_name }}</small>
+                                        <strong>{{ value|format_metric_value }}</strong>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            {% if key != 'top_suppliers' and key != 'food_categories' and key != 'rescued_by_category' and key != 'peak_rescue_times' %}
+                                <div class="col-sm-6 col-lg-4">
+                                    <div class="p-3 border rounded bg-light">
+                                        <small class="text-muted d-block">{{ key|format_metric_name }}</small>
+                                        <strong>{{ value|format_metric_value }}</strong>
+                                    </div>
+                                </div>
+                            {% endif %}
                         {% endif %}
                         {% endfor %}
                     </div>
@@ -239,6 +250,115 @@
                             </tbody>
                         </table>
                     </div>
+                    {% endif %}
+
+                    {% if report.report_type == "BENEFICIARY" %}
+                    <!-- Beneficiary Impact Report specific data -->
+                    {% if report.data.metrics.food_by_beneficiary_type %}
+                    <h6 class="mt-4 mb-3">Food Distribution by Beneficiary Type</h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Beneficiary Type</th>
+                                    <th>Food Received (kg)</th>
+                                    <th>Transaction Count</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for type in report.data.metrics.food_by_beneficiary_type %}
+                                <tr>
+                                    <td>{{ type.type_label }}</td>
+                                    <td>{{ type.total_kg|floatformat:1 }}</td>
+                                    <td>{{ type.transaction_count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+
+                    {% if report.data.metrics.nutritional_value %}
+                    <h6 class="mt-4 mb-3">Estimated Nutritional Value</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded bg-light">
+                                <small class="text-muted d-block">Calories</small>
+                                <strong>{{ report.data.metrics.nutritional_value.calories|intcomma }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded bg-light">
+                                <small class="text-muted d-block">Protein (g)</small>
+                                <strong>{{ report.data.metrics.nutritional_value.protein_g|intcomma }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded bg-light">
+                                <small class="text-muted d-block">Carbohydrates (g)</small>
+                                <strong>{{ report.data.metrics.nutritional_value.carbs_g|intcomma }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded bg-light">
+                                <small class="text-muted d-block">Fat (g)</small>
+                                <strong>{{ report.data.metrics.nutritional_value.fat_g|intcomma }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded bg-light">
+                                <small class="text-muted d-block">Fiber (g)</small>
+                                <strong>{{ report.data.metrics.nutritional_value.fiber_g|intcomma }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if report.data.metrics.satisfaction_metrics %}
+                    <h6 class="mt-4 mb-3">Beneficiary Satisfaction</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded bg-light">
+                                <small class="text-muted d-block">Average Rating</small>
+                                <strong>{{ report.data.metrics.satisfaction_metrics.average_rating|floatformat:1 }} / 5</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded bg-light">
+                                <small class="text-muted d-block">Total Ratings</small>
+                                <strong>{{ report.data.metrics.satisfaction_metrics.total_ratings }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded bg-light">
+                                <small class="text-muted d-block">Satisfaction Rate</small>
+                                <strong>{{ report.data.metrics.satisfaction_metrics.percentage_satisfied|floatformat:1 }}%</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if report.data.metrics.satisfaction_metrics.distribution %}
+                    <h6 class="mt-4 mb-3">Rating Distribution</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm w-50">
+                            <thead>
+                                <tr>
+                                    <th>Rating</th>
+                                    <th>Count</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rating, count in report.data.metrics.satisfaction_metrics.distribution.items %}
+                                <tr>
+                                    <td>{{ rating }} Star{% if rating != "1" %}s{% endif %}</td>
+                                    <td>{{ count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                    {% endif %}
                     {% endif %}
                 </div>
             </div>

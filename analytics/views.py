@@ -742,7 +742,8 @@ def report_list(request, report_type):
         "compliance": "COMPLIANCE",
         "system": "SYSTEM",
         "supplier": "SUPPLIER",
-        "waste-reduction": "WASTE_REDUCTION",  # Add mapping for waste reduction report type
+        "waste-reduction": "WASTE_REDUCTION",
+        "beneficiary": "BENEFICIARY",  # Add mapping for new beneficiary report type
     }
 
     # Get the actual report type from the mapping
@@ -850,6 +851,7 @@ def generate_report(request):
                     "SYSTEM": Report.generate_system_performance_report,
                     "SUPPLIER": Report.generate_supplier_performance_report,
                     "WASTE_REDUCTION": Report.generate_waste_reduction_report,
+                    "BENEFICIARY": Report.generate_beneficiary_impact_report,
                 }
 
                 # Get the generator function
@@ -924,6 +926,7 @@ def regenerate_report(request, report_id):
             "SYSTEM": Report.generate_system_performance_report,
             "SUPPLIER": Report.generate_supplier_performance_report,
             "WASTE_REDUCTION": Report.generate_waste_reduction_report,
+            "BENEFICIARY": Report.generate_beneficiary_impact_report,
         }
         
         generator = generator_functions.get(report.report_type)

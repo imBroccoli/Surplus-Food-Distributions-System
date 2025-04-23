@@ -524,6 +524,7 @@ class Report(BaseModel):
         ("SYSTEM", "System Performance Report"),
         ("SUPPLIER", "Supplier Performance Report"),
         ("WASTE_REDUCTION", "Food Waste Reduction Report"),
+        ("BENEFICIARY", "Beneficiary Impact Report"),
     ]
 
     SCHEDULE_CHOICES = [
@@ -726,6 +727,7 @@ class Report(BaseModel):
                 "SYSTEM": self.__class__.generate_system_performance_report,
                 "SUPPLIER": self.__class__.generate_supplier_performance_report,
                 "WASTE_REDUCTION": self.__class__.generate_waste_reduction_report,
+                "BENEFICIARY": self.__class__.generate_beneficiary_impact_report,
             }
             
             if self.report_type not in report_generators:
@@ -883,7 +885,10 @@ class Report(BaseModel):
                 formatted_metrics = {}
                 for key, value in report_data["metrics"].items():
                     # Skip nested data structures that will be shown in separate tables
-                    if key in ['top_suppliers', 'food_categories', 'rescued_by_category', 'peak_rescue_times']:
+                    skip_keys = ['top_suppliers', 'food_categories', 'rescued_by_category', 'peak_rescue_times']
+                    if self.report_type == 'BENEFICIARY':
+                        skip_keys += ['nutritional_value', 'satisfaction_metrics', 'food_by_beneficiary_type']
+                    if key in skip_keys:
                         continue
                     
                     # Format metric name to be clearer
@@ -1330,8 +1335,10 @@ class Report(BaseModel):
             
             # Handle all simple metrics (exclude nested structures)
             for key, value in report_data["metrics"].items():
-                # Skip complex nested structures - we'll handle them separately
-                if key in ['top_suppliers', 'food_categories', 'rescued_by_category', 'peak_rescue_times']:
+                skip_keys = ['top_suppliers', 'food_categories', 'rescued_by_category', 'peak_rescue_times']
+                if self.report_type == 'BENEFICIARY':
+                    skip_keys += ['nutritional_value', 'satisfaction_metrics', 'food_by_beneficiary_type']
+                if key in skip_keys:
                     continue
                 
                 # Format numbers with commas for thousands and limit decimal places
@@ -2318,6 +2325,84 @@ class Report(BaseModel):
             summary=summary
         )
 
+    @classmethod
+    def generate_beneficiary_impact_report(cls, start_date, end_date, user, title=None):
+        """Generate beneficiary impact report for the specified date range"""
+        
+        # Get recipient/nonprofit data
+        User = get_user_model()
+        recipients = User.objects.filter(
+            user_type__in=["NONPROFIT", "CONSUMER"],
+            food_requests__transaction__transaction_date__date__range=[start_date, end_date],
+            food_requests__transaction__status="COMPLETED"
+        ).distinct()
+        
+        # Calculate metrics
+        metrics = {
+            "total_beneficiaries": recipients.count(),
+            "new_beneficiaries": calculate_new_beneficiaries(start_date, end_date),
+            "food_by_beneficiary_type": calculate_food_by_beneficiary_type(start_date, end_date),
+            "estimated_people_served": calculate_people_served(start_date, end_date),
+            "nutritional_value": calculate_nutritional_value(start_date, end_date),
+            "cost_savings": calculate_beneficiary_savings(start_date, end_date),
+            "satisfaction_metrics": get_satisfaction_metrics(start_date, end_date),
+        }
+        
+        # Get daily data for trend analysis
+        daily_data = Transaction.objects.filter(
+            status="COMPLETED",
+            completion_date__date__range=[start_date, end_date],
+            request__requester__user_type__in=["NONPROFIT", "CONSUMER"]
+        ).annotate(
+            date=TruncDay('completion_date')
+        ).values('date').annotate(
+            food_received=Sum('request__quantity_requested'),
+            transaction_count=Count('id'),
+            beneficiaries_count=Count('request__requester', distinct=True)
+        ).order_by('date')
+        
+        # Format daily trends
+        trends = []
+        for day in daily_data:
+            trends.append({
+                'date': day['date'].strftime('%Y-%m-%d'),
+                'food_received': float(day['food_received'] or 0),
+                'transaction_count': day['transaction_count'],
+                'beneficiaries_count': day['beneficiaries_count']
+            })
+        
+        # If no data, provide an empty placeholder
+        if not trends:
+            trends = [{
+                'date': start_date.strftime('%Y-%m-%d'),
+                'food_received': 0,
+                'transaction_count': 0,
+                'beneficiaries_count': 0
+            }]
+        
+        # Create report data
+        report_data = {
+            "metrics": metrics,
+            "daily_trends": trends
+        }
+        
+        # Create summary text
+        summary = (
+            f"Beneficiaries served: {metrics['total_beneficiaries']}, "
+            f"Est. people reached: {metrics['estimated_people_served']}, "
+            f"Cost savings: ${metrics['cost_savings']:.2f}"
+        )
+        
+        return cls.objects.create(
+            title=title or f"Beneficiary Impact Report {start_date} to {end_date}",
+            report_type="BENEFICIARY",
+            date_range_start=start_date,
+            date_range_end=end_date,
+            generated_by=user,
+            data=report_data,
+            summary=summary
+        )
+
 
 def calculate_supplier_reliability(start_date, end_date):
     """Calculate supplier reliability as percentage of successful transactions"""
@@ -2613,3 +2698,164 @@ def get_waste_reduction_trend(start_date, end_date):
         })
     
     return trend
+
+
+def calculate_new_beneficiaries(start_date, end_date):
+    """Calculate the number of new beneficiaries during the date range"""
+    User = get_user_model()
+    
+    # Count users of type NONPROFIT or CONSUMER who registered in this date range
+    new_beneficiaries = User.objects.filter(
+        user_type__in=["NONPROFIT", "CONSUMER"],
+        date_joined__date__range=[start_date, end_date]
+    ).count()
+    
+    return new_beneficiaries
+
+
+def calculate_food_by_beneficiary_type(start_date, end_date):
+    """Calculate food received broken down by beneficiary type"""
+    # Get food quantities grouped by beneficiary type
+    food_by_type = Transaction.objects.filter(
+        status="COMPLETED",
+        completion_date__date__range=[start_date, end_date],
+        request__requester__user_type__in=["NONPROFIT", "CONSUMER"]
+    ).values(
+        'request__requester__user_type'
+    ).annotate(
+        total_kg=Sum('request__quantity_requested'),
+        transaction_count=Count('id')
+    ).order_by('request__requester__user_type')
+    
+    # Format results
+    result = []
+    for item in food_by_type:
+        beneficiary_type = item['request__requester__user_type']
+        # Format the type label to be more readable
+        type_label = "Nonprofit Organization" if beneficiary_type == "NONPROFIT" else "Individual Consumer"
+        
+        result.append({
+            'beneficiary_type': beneficiary_type,
+            'type_label': type_label,
+            'total_kg': float(item['total_kg'] or 0),
+            'transaction_count': item['transaction_count']
+        })
+    
+    return result
+
+
+def calculate_people_served(start_date, end_date):
+    """Estimate the number of people served based on food quantity and beneficiary type"""
+    # Get total food by beneficiary type
+    food_by_type = calculate_food_by_beneficiary_type(start_date, end_date)
+    
+    # Estimate people served based on beneficiary type
+    # Assumption: Each nonprofit serves 10x more people than a consumer with the same amount of food
+    total_people_served = 0
+    
+    for item in food_by_type:
+        food_kg = item['total_kg']
+        if item['beneficiary_type'] == "NONPROFIT":
+            # Each kg of food to a nonprofit helps ~10 people (estimate)
+            people_served = int(food_kg * 10)
+        else:
+            # Each kg of food to a consumer helps ~1 person (estimate)
+            people_served = int(food_kg * 1)
+        
+        total_people_served += people_served
+    
+    return total_people_served
+
+
+def calculate_nutritional_value(start_date, end_date):
+    """Estimate nutritional value of redistributed food"""
+    # Get total food redistributed in the period
+    total_food = Transaction.objects.filter(
+        status="COMPLETED",
+        completion_date__date__range=[start_date, end_date],
+        request__requester__user_type__in=["NONPROFIT", "CONSUMER"]
+    ).aggregate(
+        total_kg=Sum('request__quantity_requested')
+    )['total_kg'] or 0
+    
+    # Calculate estimated nutritional values
+    # These are rough estimates - in a real system you'd have food type data
+    nutritional_data = {
+        'calories': int(float(total_food) * 1500),  # ~1500 calories per kg
+        'protein_g': int(float(total_food) * 50),   # ~50g protein per kg
+        'carbs_g': int(float(total_food) * 150),    # ~150g carbs per kg
+        'fat_g': int(float(total_food) * 35),       # ~35g fat per kg
+        'fiber_g': int(float(total_food) * 20),     # ~20g fiber per kg
+    }
+    
+    return nutritional_data
+
+
+def calculate_beneficiary_savings(start_date, end_date):
+    """Calculate the cost savings for beneficiaries"""
+    # Get total food received by beneficiaries
+    transactions = Transaction.objects.filter(
+        status="COMPLETED", 
+        completion_date__date__range=[start_date, end_date],
+        request__requester__user_type__in=["NONPROFIT", "CONSUMER"]
+    ).select_related('request__listing')
+    
+    total_savings = 0
+    
+    for transaction in transactions:
+        if transaction.request and transaction.request.listing:
+            quantity = transaction.request.quantity_requested
+            # For cost savings, use a higher retail value than the listing price
+            # since beneficiaries would pay more at retail
+            retail_value_per_kg = 5.00  # Estimated retail value per kg
+            
+            if quantity:
+                transaction_savings = float(quantity) * retail_value_per_kg
+                total_savings += transaction_savings
+    
+    return total_savings
+
+
+def get_satisfaction_metrics(start_date, end_date):
+    """Get beneficiary satisfaction metrics from ratings"""
+    # Get ratings given by beneficiaries
+    ratings = Rating.objects.filter(
+        transaction__completion_date__date__range=[start_date, end_date],
+        transaction__request__requester__user_type__in=["NONPROFIT", "CONSUMER"]
+    )
+    
+    # Calculate metrics
+    avg_rating = ratings.aggregate(avg=Avg('rating'))['avg'] or 0
+    total_ratings = ratings.count()
+    
+    # Get distribution of ratings
+    rating_distribution = ratings.values('rating').annotate(count=Count('id')).order_by('rating')
+    
+    # Format into a result dictionary
+    distribution = {}
+    for i in range(1, 6):  # Ensure all ratings 1-5 are represented
+        distribution[str(i)] = 0
+    
+    for item in rating_distribution:
+        distribution[str(item['rating'])] = item['count']
+    
+    return {
+        'average_rating': float(avg_rating),
+        'total_ratings': total_ratings,
+        'distribution': distribution,
+        'percentage_satisfied': calculate_satisfaction_percentage(ratings)
+    }
+
+
+def calculate_satisfaction_percentage(ratings):
+    """Calculate percentage of 'satisfied' beneficiaries (ratings of 4 or 5)"""
+    if not ratings.exists():
+        return 0
+    
+    total = ratings.count()
+    satisfied = ratings.filter(rating__gte=4).count()
+    
+    if total == 0:
+        return 0
+    
+    return (satisfied / total) * 100

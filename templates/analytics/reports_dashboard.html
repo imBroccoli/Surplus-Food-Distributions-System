@@ -42,6 +42,24 @@
 .bg-teal.bg-opacity-10 {
     background-color: rgba(32, 201, 151, 0.1) !important;
 }
+.bg-purple {
+    background-color: #8e44ad !important;
+}
+.text-purple {
+    color: #8e44ad !important;
+}
+.btn-outline-purple {
+    color: #8e44ad;
+    border-color: #8e44ad;
+}
+.btn-outline-purple:hover {
+    color: #fff;
+    background-color: #8e44ad;
+    border-color: #8e44ad;
+}
+.bg-purple.bg-opacity-10 {
+    background-color: rgba(142, 68, 173, 0.1) !important;
+}
 </style>
 {% endblock %}
 
@@ -237,6 +255,28 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Beneficiary Impact Reports -->
+        <div class="col-sm-6 col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="flex-shrink-0">
+                            <div class="rounded-circle p-3 bg-purple bg-opacity-10">
+                                <i class="fas fa-hands-helping fa-fw text-purple"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h5 class="mb-1">Beneficiary Reports</h5>
+                            <p class="text-muted small mb-0">Impact on food recipients and communities</p>
+                        </div>
+                    </div>
+                    <a href="{% url 'analytics:report_list' 'beneficiary' %}" class="btn btn-outline-purple w-100">
+                        <i class="fas fa-user-friends me-2"></i>View Reports
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Recent Reports -->
@@ -267,6 +307,7 @@
                                     {% elif report.report_type == 'COMPLIANCE' %}bg-warning
                                     {% elif report.report_type == 'SUPPLIER' %}bg-indigo
                                     {% elif report.report_type == 'WASTE_REDUCTION' %}bg-teal
+                                    {% elif report.report_type == 'BENEFICIARY' %}bg-purple
                                     {% else %}bg-danger{% endif %}">
                                     {{ report.get_report_type_display }}
                                 </span>
@@ -389,6 +430,7 @@
                                     {% elif report.report_type == 'COMPLIANCE' %}bg-warning
                                     {% elif report.report_type == 'SUPPLIER' %}bg-indigo
                                     {% elif report.report_type == 'WASTE_REDUCTION' %}bg-teal
+                                    {% elif report.report_type == 'BENEFICIARY' %}bg-purple
                                     {% else %}bg-danger{% endif %}">
                                     {{ report.get_report_type_display }}
                                 </span>
@@ -613,6 +655,7 @@ function loadReports(page) {
                     else if (report.report_type === 'COMPLIANCE') badgeClass = 'bg-warning';
                     else if (report.report_type === 'SUPPLIER') badgeClass = 'bg-indigo';
                     else if (report.report_type === 'WASTE_REDUCTION') badgeClass = 'bg-teal';
+                    else if (report.report_type === 'BENEFICIARY') badgeClass = 'bg-purple';
                     else if (report.report_type === 'SYSTEM') badgeClass = 'bg-danger';
                     
                     rows += `
