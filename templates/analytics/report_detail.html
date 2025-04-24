@@ -57,7 +57,7 @@
                     <div class="row g-3">
                         {% for key, value in report.data.metrics.items %}
                         {% if report.report_type == 'BENEFICIARY' %}
-                            {% if key != 'top_suppliers' and key != 'food_categories' and key != 'rescued_by_category' and key != 'peak_rescue_times' and key != 'nutritional_value' and key != 'satisfaction_metrics' and key != 'food_by_beneficiary_type' %}
+                            {% if key != 'top_suppliers' and key != 'food_categories' and key != 'rescued_by_category' and key != 'peak_rescue_times' and key != 'nutritional_value' and key != 'satisfaction_metrics' and key != 'food_by_beneficiary_type' and key != 'top_volunteers' and key != 'activity_by_day' and key != 'volunteer_reliability' %}
                                 <div class="col-sm-6 col-lg-4">
                                     <div class="p-3 border rounded bg-light">
                                         <small class="text-muted d-block">{{ key|format_metric_name }}</small>
@@ -66,7 +66,7 @@
                                 </div>
                             {% endif %}
                         {% else %}
-                            {% if key != 'top_suppliers' and key != 'food_categories' and key != 'rescued_by_category' and key != 'peak_rescue_times' %}
+                            {% if key != 'top_suppliers' and key != 'food_categories' and key != 'rescued_by_category' and key != 'peak_rescue_times' and key != 'top_volunteers' and key != 'activity_by_day' and key != 'volunteer_reliability' %}
                                 <div class="col-sm-6 col-lg-4">
                                     <div class="p-3 border rounded bg-light">
                                         <small class="text-muted d-block">{{ key|format_metric_name }}</small>
@@ -337,7 +337,7 @@
                         </div>
                     </div>
 
-                    {% if report.data.metrics.satisfaction_metrics.distribution %}
+                    {% if report.data.metrics.satisfaction_metrics and report.data.metrics.satisfaction_metrics.distribution %}
                     <h6 class="mt-4 mb-3">Rating Distribution</h6>
                     <div class="table-responsive">
                         <table class="table table-sm w-50">
@@ -359,6 +359,120 @@
                     </div>
                     {% endif %}
                     {% endif %}
+                    {% endif %}
+
+                    {% if report.data.metrics.top_volunteers %}
+                    <h6 class="mt-4 mb-3">Top Performing Volunteers</h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Volunteer</th>
+                                    <th>Deliveries</th>
+                                    <th>Food Delivered (kg)</th>
+                                    <th>Reliability</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for volunteer in report.data.metrics.top_volunteers %}
+                                <tr>
+                                    <td>{{ volunteer.volunteer_name }}</td>
+                                    <td>{{ volunteer.delivery_count }}</td>
+                                    <td>{{ volunteer.food_delivered_kg|floatformat:1 }}</td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar {% if volunteer.reliability_percentage >= 90 %}bg-success{% elif volunteer.reliability_percentage >= 70 %}bg-info{% elif volunteer.reliability_percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                 role="progressbar" 
+                                                 class="reliability-progress-bar" 
+                                                 aria-valuenow="{{ volunteer.reliability_percentage }}" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                                {{ volunteer.reliability_percentage|floatformat:1 }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+
+                    {% if report.data.metrics.volunteer_reliability %}
+                    <h6 class="mt-4 mb-3">Volunteer Reliability Metrics</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded bg-light">
+                                <small class="text-muted d-block">Completion Rate</small>
+                                <strong>{{ report.data.metrics.volunteer_reliability.overall_completion_rate|floatformat:1 }}%</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded bg-light">
+                                <small class="text-muted d-block">On-time Rate</small>
+                                <strong>{{ report.data.metrics.volunteer_reliability.on_time_delivery_rate|floatformat:1 }}%</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded bg-light">
+                                <small class="text-muted d-block">Failure Rate</small>
+                                <strong>{{ report.data.metrics.volunteer_reliability.failure_rate|floatformat:1 }}%</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded bg-light">
+                                <small class="text-muted d-block">Reliable Volunteers</small>
+                                <strong>{{ report.data.metrics.volunteer_reliability.reliable_volunteers_count }} ({{ report.data.metrics.volunteer_reliability.reliable_volunteers_percentage|floatformat:1 }}%)</strong>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if report.data.metrics.activity_by_day and report.data.metrics.activity_by_day.days %}
+                    <h6 class="mt-4 mb-3">Volunteer Activity by Day of Week</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Day</th>
+                                            <th>Deliveries</th>
+                                            <th>Food (kg)</th>
+                                            <th>Volunteers</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for day in report.data.metrics.activity_by_day.days %}
+                                        <tr {% if report.data.metrics.activity_by_day.most_active_day.day_name == day.day_name %}class="table-success"{% endif %}>
+                                            <td>{{ day.day_name }}</td>
+                                            <td>{{ day.delivery_count }}</td>
+                                            <td>{{ day.food_delivered_kg|floatformat:1 }}</td>
+                                            <td>{{ day.volunteer_count }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            {% if report.data.metrics.activity_by_day.most_active_day %}
+                            <div class="card mb-3">
+                                <div class="card-header bg-success bg-opacity-10">
+                                    <h6 class="mb-0">Most Active Day</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-1"><strong>{{ report.data.metrics.activity_by_day.most_active_day.day_name }}</strong></p>
+                                    <ul class="list-unstyled small mb-0">
+                                        <li>Deliveries: {{ report.data.metrics.activity_by_day.most_active_day.delivery_count }}</li>
+                                        <li>Food Delivered: {{ report.data.metrics.activity_by_day.most_active_day.food_delivered_kg|floatformat:1 }} kg</li>
+                                        <li>Active Volunteers: {{ report.data.metrics.activity_by_day.most_active_day.volunteer_count }}</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
                     {% endif %}
                 </div>
             </div>

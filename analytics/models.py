@@ -525,6 +525,7 @@ class Report(BaseModel):
         ("SUPPLIER", "Supplier Performance Report"),
         ("WASTE_REDUCTION", "Food Waste Reduction Report"),
         ("BENEFICIARY", "Beneficiary Impact Report"),
+        ("VOLUNTEER", "Volunteer Performance Report"),
     ]
 
     SCHEDULE_CHOICES = [
@@ -728,6 +729,7 @@ class Report(BaseModel):
                 "SUPPLIER": self.__class__.generate_supplier_performance_report,
                 "WASTE_REDUCTION": self.__class__.generate_waste_reduction_report,
                 "BENEFICIARY": self.__class__.generate_beneficiary_impact_report,
+                "VOLUNTEER": self.__class__.generate_volunteer_performance_report,
             }
             
             if self.report_type not in report_generators:
@@ -888,6 +890,8 @@ class Report(BaseModel):
                     skip_keys = ['top_suppliers', 'food_categories', 'rescued_by_category', 'peak_rescue_times']
                     if self.report_type == 'BENEFICIARY':
                         skip_keys += ['nutritional_value', 'satisfaction_metrics', 'food_by_beneficiary_type']
+                    if self.report_type == 'VOLUNTEER':
+                        skip_keys += ['top_volunteers', 'activity_by_day', 'volunteer_reliability']
                     if key in skip_keys:
                         continue
                     
@@ -1338,6 +1342,8 @@ class Report(BaseModel):
                 skip_keys = ['top_suppliers', 'food_categories', 'rescued_by_category', 'peak_rescue_times']
                 if self.report_type == 'BENEFICIARY':
                     skip_keys += ['nutritional_value', 'satisfaction_metrics', 'food_by_beneficiary_type']
+                if self.report_type == 'VOLUNTEER':
+                    skip_keys += ['top_volunteers', 'activity_by_day', 'volunteer_reliability']
                 if key in skip_keys:
                     continue
                 
@@ -2403,6 +2409,129 @@ class Report(BaseModel):
             summary=summary
         )
 
+    @classmethod
+    def generate_volunteer_performance_report(cls, start_date, end_date, user, title=None):
+        """Generate volunteer performance report for the specified date range"""
+        # Get User model for volunteer data
+        User = get_user_model()
+        
+        # Get active volunteers with deliveries in the date range
+        active_volunteers = User.objects.filter(
+            user_type="VOLUNTEER",
+            deliveries__created_at__date__range=[start_date, end_date]
+        ).distinct()
+        
+        # Get all deliveries in the date range
+        deliveries = DeliveryAssignment.objects.filter(
+            created_at__date__range=[start_date, end_date]
+        )
+        
+        # Calculate key metrics
+        total_deliveries = deliveries.count()
+        completed_deliveries = deliveries.filter(status="DELIVERED").count()
+        failed_deliveries = deliveries.filter(status="FAILED").count()
+        
+        # Calculate delivery completion rate
+        completion_rate = 0
+        if total_deliveries > 0:
+            completion_rate = (completed_deliveries / total_deliveries) * 100
+        
+        # Calculate total food delivered (in kg)
+        total_food_delivered = deliveries.filter(
+            status="DELIVERED"
+        ).aggregate(
+            total_kg=Sum('estimated_weight')
+        )['total_kg'] or 0
+        
+        # Calculate average delivery time (from assignment to delivery)
+        completed_with_times = deliveries.filter(
+            status="DELIVERED",
+            assigned_at__isnull=False,
+            delivered_at__isnull=False
+        )
+        
+        avg_delivery_time_hours = 0
+        if completed_with_times.exists():
+            # Calculate time difference in hours for each delivery
+            total_hours = 0
+            count = 0
+            
+            for delivery in completed_with_times:
+                if delivery.assigned_at and delivery.delivered_at:
+                    time_diff = (delivery.delivered_at - delivery.assigned_at).total_seconds() / 3600
+                    
+                    # Include only reasonable values (avoid negative or extreme outliers)
+                    if 0 <= time_diff <= 24:  # Limit to 24 hours to avoid outliers
+                        total_hours += time_diff
+                        count += 1
+            
+            if count > 0:
+                avg_delivery_time_hours = round(total_hours / count, 2)
+        
+        # Calculate on-time delivery rate
+        # Define on-time as: delivered before delivery_window_end
+        on_time_deliveries = deliveries.filter(
+            status="DELIVERED",
+            delivered_at__isnull=False
+        ).filter(
+            delivered_at__lt=F('delivery_window_end')
+        ).count()
+        
+        on_time_rate = 0
+        if completed_deliveries > 0:
+            on_time_rate = (on_time_deliveries / completed_deliveries) * 100
+        
+        # Get top performing volunteers by number of deliveries
+        top_volunteers = get_top_volunteers(start_date, end_date)
+        
+        # Get volunteer reliability data
+        volunteer_reliability = calculate_volunteer_reliability(start_date, end_date)
+        
+        # Get volunteer activity by day of week
+        activity_by_day = get_volunteer_activity_by_day(start_date, end_date)
+        
+        # Compile all metrics
+        metrics = {
+            "total_active_volunteers": active_volunteers.count(),
+            "total_deliveries": total_deliveries,
+            "completed_deliveries": completed_deliveries,
+            "failed_deliveries": failed_deliveries,
+            "completion_rate": float(completion_rate),
+            "total_food_delivered_kg": float(total_food_delivered),
+            "avg_delivery_time_hours": float(avg_delivery_time_hours),
+            "on_time_delivery_rate": float(on_time_rate),
+            "top_volunteers": top_volunteers,
+            "volunteer_reliability": volunteer_reliability,
+            "activity_by_day": activity_by_day
+        }
+        
+        # Get daily volunteer performance for trends
+        daily_performance = get_daily_volunteer_performance(start_date, end_date)
+        
+        # Create report data structure
+        report_data = {
+            "metrics": metrics,
+            "daily_trends": daily_performance
+        }
+        
+        # Create summary text
+        summary = (
+            f"Active volunteers: {metrics['total_active_volunteers']}, "
+            f"Completed deliveries: {metrics['completed_deliveries']}, "
+            f"Food delivered: {metrics['total_food_delivered_kg']:.1f}kg, "
+            f"On-time rate: {metrics['on_time_delivery_rate']:.1f}%"
+        )
+        
+        return cls.objects.create(
+            title=title or f"Volunteer Performance Report {start_date} to {end_date}",
+            report_type="VOLUNTEER",
+            date_range_start=start_date,
+            date_range_end=end_date,
+            generated_by=user,
+            data=report_data,
+            summary=summary
+        )
+
 
 def calculate_supplier_reliability(start_date, end_date):
     """Calculate supplier reliability as percentage of successful transactions"""
@@ -2859,3 +2988,161 @@ def calculate_satisfaction_percentage(ratings):
         return 0
     
     return (satisfied / total) * 100
+
+
+def get_top_volunteers(start_date, end_date, limit=5):
+    """Get top performing volunteers by delivery count and reliability"""
+    User = get_user_model()
+    
+    # Get volunteers with completed deliveries in the date range
+    volunteers = User.objects.filter(
+        user_type="VOLUNTEER",
+        deliveries__status="DELIVERED",
+        deliveries__delivered_at__date__range=[start_date, end_date]
+    ).annotate(
+        delivery_count=Count('deliveries', filter=Q(
+            deliveries__status="DELIVERED",
+            deliveries__delivered_at__date__range=[start_date, end_date]
+        )),
+        total_assigned=Count('deliveries', filter=Q(
+            deliveries__created_at__date__range=[start_date, end_date]
+        )),
+        food_delivered=Sum('deliveries__estimated_weight', filter=Q(
+            deliveries__status="DELIVERED",
+            deliveries__delivered_at__date__range=[start_date, end_date]
+        ))
+    ).order_by('-delivery_count')[:limit]
+    
+    # Format result
+    result = []
+    for volunteer in volunteers:
+        reliability = 0
+        if volunteer.total_assigned > 0:
+            reliability = (volunteer.delivery_count / volunteer.total_assigned) * 100
+            
+        result.append({
+            'volunteer_id': volunteer.id,
+            'volunteer_name': volunteer.get_full_name() or volunteer.email,
+            'delivery_count': volunteer.delivery_count,
+            'food_delivered_kg': float(volunteer.food_delivered or 0),
+            'reliability_percentage': float(reliability)
+        })
+    
+    return result
+
+
+def calculate_volunteer_reliability(start_date, end_date):
+    """Calculate volunteer reliability metrics"""
+    User = get_user_model()
+    
+    # Get volunteers with at least one delivery in the date range
+    volunteers_with_deliveries = User.objects.filter(
+        user_type="VOLUNTEER",
+        deliveries__created_at__date__range=[start_date, end_date]
+    ).annotate(
+        total_assigned=Count('deliveries', filter=Q(
+            deliveries__created_at__date__range=[start_date, end_date]
+        )),
+        completed=Count('deliveries', filter=Q(
+            deliveries__status="DELIVERED",
+            deliveries__delivered_at__date__range=[start_date, end_date]
+        )),
+        failed=Count('deliveries', filter=Q(
+            deliveries__status="FAILED",
+            deliveries__updated_at__date__range=[start_date, end_date]
+        )),
+        on_time=Count('deliveries', filter=Q(
+            deliveries__status="DELIVERED",
+            deliveries__delivered_at__date__range=[start_date, end_date],
+            deliveries__delivered_at__lt=F('deliveries__delivery_window_end')
+        ))
+    )
+    
+    # Calculate overall reliability metrics
+    total_volunteers = volunteers_with_deliveries.count()
+    total_assigned = sum(v.total_assigned for v in volunteers_with_deliveries)
+    total_completed = sum(v.completed for v in volunteers_with_deliveries)
+    total_failed = sum(v.failed for v in volunteers_with_deliveries)
+    total_on_time = sum(v.on_time for v in volunteers_with_deliveries)
+    
+    # Calculate percentages
+    completion_rate = 0
+    on_time_rate = 0
+    failure_rate = 0
+    
+    if total_assigned > 0:
+        completion_rate = (total_completed / total_assigned) * 100
+        failure_rate = (total_failed / total_assigned) * 100
+        
+    if total_completed > 0:
+        on_time_rate = (total_on_time / total_completed) * 100
+    
+    # Count highly reliable volunteers (>90% completion rate)
+    reliable_volunteers = 0
+    for volunteer in volunteers_with_deliveries:
+        if volunteer.total_assigned >= 3:  # Only count volunteers with meaningful sample size
+            volunteer_completion_rate = (volunteer.completed / volunteer.total_assigned) * 100
+            if volunteer_completion_rate >= 90:
+                reliable_volunteers += 1
+    
+    reliable_percentage = 0
+    if total_volunteers > 0:
+        reliable_percentage = (reliable_volunteers / total_volunteers) * 100
+    
+    return {
+        'overall_completion_rate': float(completion_rate),
+        'on_time_delivery_rate': float(on_time_rate),
+        'failure_rate': float(failure_rate),
+        'reliable_volunteers_count': reliable_volunteers,
+        'reliable_volunteers_percentage': float(reliable_percentage)
+    }
+
+
+def get_volunteer_activity_by_day(start_date, end_date):
+    """Get volunteer activity patterns by day of week"""
+    # Get completed deliveries grouped by day of week
+    deliveries_by_day = DeliveryAssignment.objects.filter(
+        status="DELIVERED",
+        delivered_at__date__range=[start_date, end_date]
+    ).annotate(
+        day_of_week=ExtractWeekDay('delivered_at')
+    ).values('day_of_week').annotate(
+        count=Count('id'),
+        food_delivered=Sum('estimated_weight'),
+        volunteer_count=Count('volunteer', distinct=True)
+    ).order_by('day_of_week')
+    
+    # Format results
+    days = []
+    day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    
+    # Initialize counts for all days
+    for i, day_name in enumerate(day_names):
+        # Find data for this day if it exists
+        day_data = next((day for day in deliveries_by_day if day['day_of_week'] % 7 == i), None)
+        
+        days.append({
+            'day_of_week': i,
+            'day_name': day_name,
+            'delivery_count': day_data['count'] if day_data else 0,
+            'food_delivered_kg': float(day_data['food_delivered'] if day_data and day_data['food_delivered'] else 0),
+            'volunteer_count': day_data['volunteer_count'] if day_data else 0
+        })
+    
+    # Get the most active day
+    most_active_day = max(days, key=lambda x: x['delivery_count']) if days else None
+    
+    return {
+        'days': days,
+        'most_active_day': most_active_day
+    }
+
+
+def get_daily_volunteer_performance(start_date, end_date):
+    """Get daily volunteer performance metrics"""
+    # Create a complete date range
+    date_range = []
+    current_date = start_date
+    while current_date <= end_date:
+        date_range.append(current_date)
+        current_date += timezone.timedelta(days=1)

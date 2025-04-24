@@ -743,7 +743,8 @@ def report_list(request, report_type):
         "system": "SYSTEM",
         "supplier": "SUPPLIER",
         "waste-reduction": "WASTE_REDUCTION",
-        "beneficiary": "BENEFICIARY",  # Add mapping for new beneficiary report type
+        "beneficiary": "BENEFICIARY",
+        "volunteer": "VOLUNTEER",  # <-- Fix: add this line
     }
 
     # Get the actual report type from the mapping
@@ -852,6 +853,7 @@ def generate_report(request):
                     "SUPPLIER": Report.generate_supplier_performance_report,
                     "WASTE_REDUCTION": Report.generate_waste_reduction_report,
                     "BENEFICIARY": Report.generate_beneficiary_impact_report,
+                    "VOLUNTEER": Report.generate_volunteer_performance_report,  # Added volunteer report generator
                 }
 
                 # Get the generator function
