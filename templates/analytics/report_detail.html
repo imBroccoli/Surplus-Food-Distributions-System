@@ -27,9 +27,9 @@
                     <i class="fas fa-file-excel me-2"></i>Export as Excel
                 </a></li>
             </ul>
-            <a href="{% url 'analytics:regenerate_report' report.id %}" class="btn btn-outline-primary">
+            <button type="button" class="btn btn-outline-primary" onclick="regenerateReport({{ report.id }})">
                 <i class="fas fa-sync-alt me-2"></i>Regenerate
-            </a>
+            </button>
             <button type="button" class="btn btn-outline-primary" onclick="scheduleReport({{ report.id }})">
                 <i class="fas fa-clock me-2"></i>Schedule
             </button>
@@ -724,9 +724,9 @@
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
-                        <a href="{% url 'analytics:regenerate_report' report.id %}" class="btn btn-outline-primary">
+                        <button type="button" class="btn btn-outline-primary" onclick="regenerateReport({{ report.id }})">
                             <i class="fas fa-sync-alt me-2"></i>Regenerate Report
-                        </a>
+                        </button>
                         {% if report.is_scheduled %}
                         <button type="button" class="btn btn-outline-warning w-100" onclick="unscheduleReport({{ report.id }})">
                             <i class="fas fa-clock-slash me-2"></i>Stop Scheduling
@@ -942,6 +942,59 @@ function scheduleReport(reportId) {
                     icon: 'error',
                     title: 'Error',
                     text: 'An error occurred while scheduling the report'
+                });
+            });
+        }
+    });
+}
+
+function regenerateReport(reportId) {
+    sweetify.fire({
+        title: 'Regenerate Report',
+        text: 'Are you sure you want to regenerate this report?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, regenerate it',
+        cancelButtonText: 'No, cancel',
+        confirmButtonColor: '#0d6efd'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const formData = new FormData();
+            
+            fetch(`/analytics/reports/${reportId}/regenerate/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    sweetify.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: data.message,
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else {
+                    sweetify.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message || 'An error occurred while regenerating the report'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                sweetify.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'An error occurred while regenerating the report'
                 });
             });
         }

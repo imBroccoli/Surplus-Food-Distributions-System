@@ -65,9 +65,11 @@
             padding: 0.5rem 1rem;
         }
     </style>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
     {% block extra_css %}{% endblock %}
     
-    <!-- Custom CSS -->
+    <!-- Custom CSS for nonprofit verification page only -->
     {% if request.resolver_match.url_name == 'nonprofit_verification_list' %}
     <link rel="stylesheet" href="{% static 'css/nonprofit_verification.css' %}">
     {% endif %}

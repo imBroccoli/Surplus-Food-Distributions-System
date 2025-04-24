@@ -963,6 +963,7 @@ def regenerate_report(request, report_id):
             "BENEFICIARY": Report.generate_beneficiary_impact_report,
             "VOLUNTEER": Report.generate_volunteer_performance_report,
             "EXPIRY_WASTE": Report.generate_expiry_waste_report,
+            "USER_RETENTION": Report.generate_user_retention_churn_report,
         }
         
         generator = generator_functions.get(report.report_type)

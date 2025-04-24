@@ -337,7 +337,7 @@
                             <p class="text-muted small mb-0">Track user retention and churn metrics</p>
                         </div>
                     </div>
-                    <a href="{% url 'analytics:report_list' 'user-retention' %}" class="btn btn-outline-indigo w-100">
+                    <a href="{% url 'analytics:report_list' 'user-retention' %}" class="btn btn-outline-primary w-100">
                         <i class="fas fa-chart-line me-2"></i>View Reports
                     </a>
                 </div>
@@ -373,7 +373,7 @@
                                     {% elif report.report_type == 'COMPLIANCE' %}bg-warning
                                     {% elif report.report_type == 'SUPPLIER' %}bg-indigo
                                     {% elif report.report_type == 'WASTE_REDUCTION' %}bg-teal
-                                    {% elif report.report_type == 'BENEFICIARY' %}bg-purple
+                                    {% elif report.report_type == 'BENEFICIARY' %}bg-purple text-dark
                                     {% else %}bg-danger{% endif %}">
                                     {{ report.get_report_type_display }}
                                 </span>
@@ -721,7 +721,7 @@ function loadReports(page) {
                     else if (report.report_type === 'COMPLIANCE') badgeClass = 'bg-warning';
                     else if (report.report_type === 'SUPPLIER') badgeClass = 'bg-indigo';
                     else if (report.report_type === 'WASTE_REDUCTION') badgeClass = 'bg-teal';
-                    else if (report.report_type === 'BENEFICIARY') badgeClass = 'bg-purple';
+                    else if (report.report_type === 'BENEFICIARY') badgeClass = 'bg-purple text-dark';
                     else if (report.report_type === 'SYSTEM') badgeClass = 'bg-danger';
                     
                     rows += `
