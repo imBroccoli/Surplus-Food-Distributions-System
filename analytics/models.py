@@ -526,6 +526,7 @@ class Report(BaseModel):
         ("WASTE_REDUCTION", "Food Waste Reduction Report"),
         ("BENEFICIARY", "Beneficiary Impact Report"),
         ("VOLUNTEER", "Volunteer Performance Report"),
+        ("EXPIRY_WASTE", "Listing Expiry & Food Waste Report"),
     ]
 
     SCHEDULE_CHOICES = [
@@ -730,6 +731,7 @@ class Report(BaseModel):
                 "WASTE_REDUCTION": self.__class__.generate_waste_reduction_report,
                 "BENEFICIARY": self.__class__.generate_beneficiary_impact_report,
                 "VOLUNTEER": self.__class__.generate_volunteer_performance_report,
+                "EXPIRY_WASTE": self.__class__.generate_expiry_waste_report,
             }
             
             if self.report_type not in report_generators:
@@ -888,6 +890,9 @@ class Report(BaseModel):
                 for key, value in report_data["metrics"].items():
                     # Skip nested data structures that will be shown in separate tables
                     skip_keys = ['top_suppliers', 'food_categories', 'rescued_by_category', 'peak_rescue_times']
+                    # Add expiry waste report keys to skip
+                    if self.report_type == 'EXPIRY_WASTE':
+                        skip_keys += ['suppliers_with_most_expired', 'expired_by_food_type']
                     if self.report_type == 'BENEFICIARY':
                         skip_keys += ['nutritional_value', 'satisfaction_metrics', 'food_by_beneficiary_type']
                     if self.report_type == 'VOLUNTEER':
@@ -1136,6 +1141,63 @@ class Report(BaseModel):
                         )
                         elements.append(hour_table)
                         elements.append(Spacer(1, 20))
+                
+                # Add expiry waste report tables
+                if self.report_type == 'EXPIRY_WASTE':
+                    # Suppliers With Most Expired
+                    if 'suppliers_with_most_expired' in report_data["metrics"] and isinstance(report_data["metrics"]['suppliers_with_most_expired'], list):
+                        elements.append(Paragraph("Suppliers With Most Expired Listings", styles["Heading2"]))
+                        elements.append(Spacer(1, 10))
+                        supplier_data = [["Supplier", "Expired Count", "Food Wasted (kg)"]]
+                        for supplier in report_data["metrics"]['suppliers_with_most_expired']:
+                            supplier_data.append([
+                                supplier.get('supplier_name', ''),
+                                supplier.get('expired_count', 0),
+                                "{:.1f}".format(float(supplier.get('wasted_kg', 0)))
+                            ])
+                        if len(supplier_data) > 1:
+                            supplier_table = Table(supplier_data, colWidths=[200, 120, 120])
+                            supplier_table.setStyle(TableStyle([
+                                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e74c3c")),
+                                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                                ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+                                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                                ("FONTSIZE", (0, 0), (-1, 0), 11),
+                                ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                                ("BACKGROUND", (0, 1), (-1, -1), colors.white),
+                                ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#bdc3c7")),
+                                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f9f9f9")]),
+                                ("ALIGN", (1, 1), (2, -1), "RIGHT"),
+                            ]))
+                            elements.append(supplier_table)
+                            elements.append(Spacer(1, 20))
+                    # Expired By Food Type
+                    if 'expired_by_food_type' in report_data["metrics"] and isinstance(report_data["metrics"]['expired_by_food_type'], list):
+                        elements.append(Paragraph("Expired Food By Type", styles["Heading2"]))
+                        elements.append(Spacer(1, 10))
+                        type_data = [["Food Type", "Count", "Wasted (kg)"]]
+                        for food_type in report_data["metrics"]['expired_by_food_type']:
+                            type_data.append([
+                                food_type.get('type', ''),
+                                food_type.get('count', 0),
+                                "{:.1f}".format(float(food_type.get('wasted_kg', 0)))
+                            ])
+                        if len(type_data) > 1:
+                            type_table = Table(type_data, colWidths=[200, 120, 120])
+                            type_table.setStyle(TableStyle([
+                                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e67e22")),
+                                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                                ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+                                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                                ("FONTSIZE", (0, 0), (-1, 0), 11),
+                                ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                                ("BACKGROUND", (0, 1), (-1, -1), colors.white),
+                                ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#bdc3c7")),
+                                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f9f9f9")]),
+                                ("ALIGN", (1, 1), (2, -1), "RIGHT"),
+                            ]))
+                            elements.append(type_table)
+                            elements.append(Spacer(1, 20))
 
             # Format the daily trends table
             if (
@@ -1340,6 +1402,9 @@ class Report(BaseModel):
             # Handle all simple metrics (exclude nested structures)
             for key, value in report_data["metrics"].items():
                 skip_keys = ['top_suppliers', 'food_categories', 'rescued_by_category', 'peak_rescue_times']
+                # Add expiry waste report keys to skip
+                if self.report_type == 'EXPIRY_WASTE':
+                    skip_keys += ['suppliers_with_most_expired', 'expired_by_food_type']
                 if self.report_type == 'BENEFICIARY':
                     skip_keys += ['nutritional_value', 'satisfaction_metrics', 'food_by_beneficiary_type']
                 if self.report_type == 'VOLUNTEER':
@@ -1437,6 +1502,31 @@ class Report(BaseModel):
                         writer.writerow([hour.get('formatted_hour', 'Unknown'), hour.get('count', 0)])
                     
                     writer.writerow([])  # Empty row for spacing
+            
+            # Add expiry waste report tables
+            if self.report_type == 'EXPIRY_WASTE':
+                # Suppliers With Most Expired
+                if 'suppliers_with_most_expired' in report_data["metrics"] and isinstance(report_data["metrics"]['suppliers_with_most_expired'], list):
+                    writer.writerow(["Suppliers With Most Expired Listings"])
+                    writer.writerow(["Supplier", "Expired Count", "Food Wasted (kg)"])
+                    for supplier in report_data["metrics"]['suppliers_with_most_expired']:
+                        writer.writerow([
+                            supplier.get('supplier_name', ''),
+                            supplier.get('expired_count', 0),
+                            "{:.1f}".format(float(supplier.get('wasted_kg', 0)))
+                        ])
+                    writer.writerow([])
+                # Expired By Food Type
+                if 'expired_by_food_type' in report_data["metrics"] and isinstance(report_data["metrics"]['expired_by_food_type'], list):
+                    writer.writerow(["Expired Food By Type"])
+                    writer.writerow(["Food Type", "Count", "Wasted (kg)"])
+                    for food_type in report_data["metrics"]['expired_by_food_type']:
+                        writer.writerow([
+                            food_type.get('type', ''),
+                            food_type.get('count', 0),
+                            "{:.1f}".format(float(food_type.get('wasted_kg', 0)))
+                        ])
+                    writer.writerow([])
 
         if (
             report_data.get("daily_trends")
@@ -2525,6 +2615,182 @@ class Report(BaseModel):
         return cls.objects.create(
             title=title or f"Volunteer Performance Report {start_date} to {end_date}",
             report_type="VOLUNTEER",
+            date_range_start=start_date,
+            date_range_end=end_date,
+            generated_by=user,
+            data=report_data,
+            summary=summary
+        )
+
+    @classmethod
+    def generate_expiry_waste_report(cls, start_date, end_date, user, title=None):
+        """Generate listing expiry and food waste report for the specified date range"""
+        
+        # Get all expired listings in the date range - listings that reached their expiry date
+        expired_listings = FoodListing.objects.filter(
+            models.Q(status="EXPIRED") | 
+            models.Q(expiry_date__date__range=[start_date, end_date], expiry_date__lte=timezone.now()),
+            created_at__date__range=[start_date, end_date]
+        )
+        
+        # Use Transaction to get rescued listings
+        rescued_transactions = Transaction.objects.filter(
+            status="COMPLETED",
+            completion_date__date__range=[start_date, end_date]
+        )
+        rescued_listing_ids = rescued_transactions.values_list("request__listing_id", flat=True).distinct()
+        rescued_listings_count = rescued_listing_ids.count()
+        
+        # Calculate key metrics
+        total_listings = FoodListing.objects.filter(
+            created_at__date__range=[start_date, end_date]
+        ).count()
+        
+        expired_count = expired_listings.count()
+        rescued_count = rescued_listings_count
+        
+        # Calculate waste percentage
+        waste_percentage = 0
+        if total_listings > 0:
+            waste_percentage = (expired_count / total_listings) * 100
+        
+        # Calculate rescue percentage
+        rescue_percentage = 0
+        if total_listings > 0:
+            rescue_percentage = (rescued_count / total_listings) * 100
+            
+        # Calculate total food wasted (kg)
+        total_food_wasted = expired_listings.aggregate(
+            total_kg=Sum('quantity')
+        )['total_kg'] or 0
+        
+        # Get average time to expiry (hours between creation and expiry)
+        total_hours_to_expiry = 0
+        count_with_valid_times = 0
+        
+        for listing in expired_listings:
+            if listing.created_at and listing.expiry_date:
+                hours_diff = (listing.expiry_date - listing.created_at).total_seconds() / 3600
+                if 0 < hours_diff < 720:  # Filter outliers (greater than 30 days)
+                    total_hours_to_expiry += hours_diff
+                    count_with_valid_times += 1
+        
+        avg_time_to_expiry = 0
+        if count_with_valid_times > 0:
+            avg_time_to_expiry = total_hours_to_expiry / count_with_valid_times
+            
+        # Analyze expired listings by supplier
+        supplier_expiry_data = expired_listings.values(
+            'supplier__id',
+            'supplier__email', 
+            'supplier__first_name',
+            'supplier__last_name',
+            'supplier__businessprofile__company_name'
+        ).annotate(
+            expired_count=Count('id'),
+            total_wasted_kg=Sum('quantity')
+        ).order_by('-expired_count')[:10]  # Top 10 suppliers by expired listings
+        
+        # Format supplier data
+        suppliers_with_expired = []
+        for supplier in supplier_expiry_data:
+            # Get supplier name
+            company_name = supplier.get('supplier__businessprofile__company_name', '')
+            first_name = supplier.get('supplier__first_name', '')
+            last_name = supplier.get('supplier__last_name', '')
+            email = supplier.get('supplier__email', '')
+            
+            if company_name:
+                supplier_name = company_name
+            elif first_name and last_name:
+                supplier_name = f"{first_name} {last_name}"
+            else:
+                supplier_name = email
+                
+            suppliers_with_expired.append({
+                'supplier_id': supplier['supplier__id'],
+                'supplier_name': supplier_name,
+                'expired_count': supplier['expired_count'],
+                'wasted_kg': float(supplier['total_wasted_kg'] or 0)
+            })
+        
+        # Get expired listings by food type
+        food_types_expired = expired_listings.values(
+            'listing_type'
+        ).annotate(
+            count=Count('id'),
+            total_kg=Sum('quantity')
+        ).order_by('-count')
+        
+        # Format food types data
+        expired_by_type = []
+        for food_type in food_types_expired:
+            expired_by_type.append({
+                'type': food_type['listing_type'],
+                'count': food_type['count'],
+                'wasted_kg': float(food_type['total_kg'] or 0)
+            })
+        
+        # Get daily expired and rescued food trends
+        daily_expiry_data = []
+        current_date = start_date
+        
+        while current_date <= end_date:
+            # Count expired listings for this day
+            day_expired = expired_listings.filter(
+                expiry_date__date=current_date
+            ).aggregate(
+                count=Count('id'),
+                quantity=Sum('quantity')
+            )
+            
+            # Count rescued listings for this day using transactions
+            day_rescued_tx = rescued_transactions.filter(
+                completion_date__date=current_date
+            )
+            day_rescued_listing_ids = day_rescued_tx.values_list("request__listing_id", flat=True).distinct()
+            day_rescued_count = day_rescued_listing_ids.count()
+            day_rescued_kg = day_rescued_tx.aggregate(quantity=Sum('request__quantity_requested'))['quantity'] or 0
+            
+            daily_expiry_data.append({
+                'date': current_date.strftime('%Y-%m-%d'),
+                'expired_count': day_expired['count'] or 0,
+                'expired_kg': float(day_expired['quantity'] or 0),
+                'rescued_count': day_rescued_count,
+                'rescued_kg': float(day_rescued_kg),
+            })
+            
+            current_date += timezone.timedelta(days=1)
+        
+        # Compile metrics
+        metrics = {
+            "total_listings": total_listings,
+            "expired_listings_count": expired_count,
+            "rescued_listings_count": rescued_count,
+            "waste_percentage": float(waste_percentage),
+            "rescue_percentage": float(rescue_percentage),
+            "total_food_wasted_kg": float(total_food_wasted),
+            "avg_time_to_expiry_hours": float(avg_time_to_expiry),
+            "suppliers_with_most_expired": suppliers_with_expired,
+            "expired_by_food_type": expired_by_type
+        }
+        
+        # Create report data structure
+        report_data = {
+            "metrics": metrics,
+            "daily_trends": daily_expiry_data
+        }
+        
+        # Create summary
+        summary = (
+            f"Expired Listings: {expired_count} ({waste_percentage:.1f}% of total), "
+            f"Food wasted: {float(total_food_wasted):.1f}kg, "
+            f"Avg time to expiry: {avg_time_to_expiry:.1f} hours"
+        )
+        
+        return cls.objects.create(
+            title=title or f"Listing Expiry & Food Waste Report {start_date} to {end_date}",
+            report_type="EXPIRY_WASTE",
             date_range_start=start_date,
             date_range_end=end_date,
             generated_by=user,

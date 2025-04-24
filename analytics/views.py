@@ -744,7 +744,8 @@ def report_list(request, report_type):
         "supplier": "SUPPLIER",
         "waste-reduction": "WASTE_REDUCTION",
         "beneficiary": "BENEFICIARY",
-        "volunteer": "VOLUNTEER",  # <-- Fix: add this line
+        "volunteer": "VOLUNTEER",
+        "expiry-waste": "EXPIRY_WASTE",  # Add mapping for expiry-waste report
     }
 
     # Get the actual report type from the mapping
@@ -853,7 +854,8 @@ def generate_report(request):
                     "SUPPLIER": Report.generate_supplier_performance_report,
                     "WASTE_REDUCTION": Report.generate_waste_reduction_report,
                     "BENEFICIARY": Report.generate_beneficiary_impact_report,
-                    "VOLUNTEER": Report.generate_volunteer_performance_report,  # Added volunteer report generator
+                    "VOLUNTEER": Report.generate_volunteer_performance_report,
+                    "EXPIRY_WASTE": Report.generate_expiry_waste_report,
                 }
 
                 # Get the generator function
@@ -929,6 +931,8 @@ def regenerate_report(request, report_id):
             "SUPPLIER": Report.generate_supplier_performance_report,
             "WASTE_REDUCTION": Report.generate_waste_reduction_report,
             "BENEFICIARY": Report.generate_beneficiary_impact_report,
+            "VOLUNTEER": Report.generate_volunteer_performance_report,
+            "EXPIRY_WASTE": Report.generate_expiry_waste_report,
         }
         
         generator = generator_functions.get(report.report_type)

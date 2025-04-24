@@ -57,7 +57,7 @@
                     <div class="row g-3">
                         {% for key, value in report.data.metrics.items %}
                         {% if report.report_type == 'BENEFICIARY' %}
-                            {% if key != 'top_suppliers' and key != 'food_categories' and key != 'rescued_by_category' and key != 'peak_rescue_times' and key != 'nutritional_value' and key != 'satisfaction_metrics' and key != 'food_by_beneficiary_type' and key != 'top_volunteers' and key != 'activity_by_day' and key != 'volunteer_reliability' %}
+                            {% if key != 'top_suppliers' and key != 'food_categories' and key != 'rescued_by_category' and key != 'peak_rescue_times' and key != 'nutritional_value' and key != 'satisfaction_metrics' and key != 'food_by_beneficiary_type' and key != 'top_volunteers' and key != 'activity_by_day' and key != 'volunteer_reliability' and key != 'suppliers_with_most_expired' and key != 'expired_by_food_type' and value|stringformat:'s' not in '[{' and value|stringformat:'s' not in '{' %}
                                 <div class="col-sm-6 col-lg-4">
                                     <div class="p-3 border rounded bg-light">
                                         <small class="text-muted d-block">{{ key|format_metric_name }}</small>
@@ -66,7 +66,7 @@
                                 </div>
                             {% endif %}
                         {% else %}
-                            {% if key != 'top_suppliers' and key != 'food_categories' and key != 'rescued_by_category' and key != 'peak_rescue_times' and key != 'top_volunteers' and key != 'activity_by_day' and key != 'volunteer_reliability' %}
+                            {% if key != 'top_suppliers' and key != 'food_categories' and key != 'rescued_by_category' and key != 'peak_rescue_times' and key != 'top_volunteers' and key != 'activity_by_day' and key != 'volunteer_reliability' and key != 'suppliers_with_most_expired' and key != 'expired_by_food_type' and value|stringformat:'s' not in '[{' and value|stringformat:'s' not in '{' %}
                                 <div class="col-sm-6 col-lg-4">
                                     <div class="p-3 border rounded bg-light">
                                         <small class="text-muted d-block">{{ key|format_metric_name }}</small>
@@ -472,6 +472,54 @@
                             </div>
                             {% endif %}
                         </div>
+                    </div>
+                    {% endif %}
+
+                    {% if report.data.metrics.suppliers_with_most_expired %}
+                    <h6 class="mt-4 mb-3">Suppliers With Most Expired Listings</h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Supplier</th>
+                                    <th>Expired Count</th>
+                                    <th>Food Wasted (kg)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for supplier in report.data.metrics.suppliers_with_most_expired %}
+                                <tr>
+                                    <td>{{ supplier.supplier_name }}</td>
+                                    <td>{{ supplier.expired_count }}</td>
+                                    <td>{{ supplier.wasted_kg|floatformat:1 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+
+                    {% if report.data.metrics.expired_by_food_type %}
+                    <h6 class="mt-4 mb-3">Expired Food By Type</h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Food Type</th>
+                                    <th>Count</th>
+                                    <th>Wasted (kg)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for type in report.data.metrics.expired_by_food_type %}
+                                <tr>
+                                    <td>{{ type.type }}</td>
+                                    <td>{{ type.count }}</td>
+                                    <td>{{ type.wasted_kg|floatformat:1 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                     {% endif %}
                 </div>
