@@ -733,9 +733,8 @@ def reports_dashboard(request):
 @login_required
 @user_passes_test(is_admin)
 def report_list(request, report_type):
-    """List all reports of a specific type"""
-    # Map URL-friendly names to actual report types
-    report_type_mapping = {
+    """List reports of a specific type"""
+    report_types_map = {
         "impact": "IMPACT",
         "transaction": "TRANSACTION",
         "user-activity": "USER_ACTIVITY",
@@ -745,37 +744,67 @@ def report_list(request, report_type):
         "waste-reduction": "WASTE_REDUCTION",
         "beneficiary": "BENEFICIARY",
         "volunteer": "VOLUNTEER",
-        "expiry-waste": "EXPIRY_WASTE",  # Add mapping for expiry-waste report
+        "expiry-waste": "EXPIRY_WASTE",
+        "user-retention": "USER_RETENTION",  # Added new report type
     }
 
-    # Get the actual report type from the mapping
-    actual_report_type = report_type_mapping.get(report_type.lower())
-    if not actual_report_type:
-        messages.error(request, "Invalid report type")
+    # Get report type from URL parameter
+    report_type_code = report_types_map.get(report_type)
+
+    if not report_type_code:
+        messages.error(request, f"Invalid report type: {report_type}")
         return redirect("analytics:reports_dashboard")
 
-    reports = Report.objects.filter(report_type=actual_report_type)
+    # Get and validate date range filters
+    date_from = request.GET.get("date_from")
+    date_to = request.GET.get("date_to")
+    
+    clean_date_from, clean_date_to = validate_filter_dates(date_from, date_to)
 
+    # Get reports of the specified type with optional date filtering
+    reports = Report.objects.filter(report_type=report_type_code)
+    
     # Apply status filter if provided
     status = request.GET.get("status")
     if status == "scheduled":
         reports = reports.filter(is_scheduled=True)
     elif status == "one-time":
         reports = reports.filter(is_scheduled=False)
+    
+    # Apply date filtering if provided
+    if clean_date_from and clean_date_to:
+        reports = reports.filter(
+            date_generated__date__range=[clean_date_from, clean_date_to],
+        )
+    
+    # Order by most recent first
+    reports = reports.order_by("-date_generated")
 
+    # Paginate reports
     paginator = Paginator(reports, 10)
     page = request.GET.get("page")
-    reports = paginator.get_page(page)
 
-    return render(
-        request,
-        "analytics/report_list.html",
-        {
-            "reports": reports,
-            "report_type": report_type,
-            "current_filter": status,
-        },
-    )
+    try:
+        reports_page = paginator.page(page)
+    except PageNotAnInteger:
+        reports_page = paginator.page(1)
+    except EmptyPage:
+        reports_page = paginator.page(paginator.num_pages)
+
+    # Get the display name for the report type
+    report_type_display = dict(Report.REPORT_TYPES).get(report_type_code, report_type.title())
+
+    context = {
+        "reports": reports_page,
+        "report_type": report_type,
+        "report_type_code": report_type_code,
+        "report_type_display": report_type_display,
+        "date_from": clean_date_from,
+        "date_to": clean_date_to,
+        "current_filter": status,
+    }
+
+    return render(request, "analytics/report_list.html", context)
 
 
 @login_required
@@ -856,6 +885,7 @@ def generate_report(request):
                     "BENEFICIARY": Report.generate_beneficiary_impact_report,
                     "VOLUNTEER": Report.generate_volunteer_performance_report,
                     "EXPIRY_WASTE": Report.generate_expiry_waste_report,
+                    "USER_RETENTION": Report.generate_user_retention_churn_report,  # Fixed method name
                 }
 
                 # Get the generator function

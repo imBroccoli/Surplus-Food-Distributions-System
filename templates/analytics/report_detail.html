@@ -522,6 +522,163 @@
                         </table>
                     </div>
                     {% endif %}
+                    
+                    {% if report.report_type == "USER_RETENTION" %}
+                    <!-- User Retention & Churn Report specific data -->
+                    {% if report.data.metrics.retention_by_user_type %}
+                    <h6 class="mt-4 mb-3">Retention by User Type</h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>User Type</th>
+                                    <th>Retention Rate (%)</th>
+                                    <th>Active in Previous</th>
+                                    <th>Retained Users</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for type in report.data.metrics.retention_by_user_type %}
+                                <tr>
+                                    <td>{{ type.user_type }}</td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar {% if type.retention_rate >= 70 %}bg-success{% elif type.retention_rate >= 40 %}bg-info{% elif type.retention_rate >= 20 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                 role="progressbar" 
+                                                 style="width: {{ type.retention_rate }}%;"
+                                                 aria-valuenow="{{ type.retention_rate }}" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                                {{ type.retention_rate }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ type.active_in_previous }}</td>
+                                    <td>{{ type.retained_users }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+
+                    {% if report.data.metrics.churn_by_user_type %}
+                    <h6 class="mt-4 mb-3">Churn by User Type</h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>User Type</th>
+                                    <th>Churn Rate (%)</th>
+                                    <th>Churned Users</th>
+                                    <th>Previously Active</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for type in report.data.metrics.churn_by_user_type %}
+                                <tr>
+                                    <td>{{ type.user_type }}</td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar {% if type.churn_rate <= 20 %}bg-success{% elif type.churn_rate <= 40 %}bg-info{% elif type.churn_rate <= 60 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                 role="progressbar" 
+                                                 style="width: {{ type.churn_rate }}%;"
+                                                 aria-valuenow="{{ type.churn_rate }}" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                                {{ type.churn_rate }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ type.churned_users }}</td>
+                                    <td>{{ type.active_in_previous }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+
+                    {% if report.data.metrics.engagement_by_user_type %}
+                    <h6 class="mt-4 mb-3">User Engagement by Type</h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>User Type</th>
+                                    <th>Total Actions</th>
+                                    <th>Avg Actions per User</th>
+                                    <th>Login Actions</th>
+                                    <th>Type-Specific Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for type in report.data.metrics.engagement_by_user_type %}
+                                <tr>
+                                    <td>{{ type.user_type }}</td>
+                                    <td>{{ type.total_actions }}</td>
+                                    <td>{{ type.avg_actions_per_user }}</td>
+                                    <td>{{ type.login_actions }}</td>
+                                    <td>{{ type.type_specific_actions }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+
+                    {% if report.data.metrics.user_type_breakdown %}
+                    <h6 class="mt-4 mb-3">User Type Breakdown</h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>User Type</th>
+                                    <th>Total Users</th>
+                                    <th>Active Users</th>
+                                    <th>Inactive Users</th>
+                                    <th>New Users</th>
+                                    <th>Active (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for type in report.data.metrics.user_type_breakdown %}
+                                <tr>
+                                    <td>{{ type.user_type }}</td>
+                                    <td>{{ type.total_users }}</td>
+                                    <td>{{ type.active_users }}</td>
+                                    <td>{{ type.inactive_users }}</td>
+                                    <td>{{ type.new_users }}</td>
+                                    <td>{{ type.active_percentage }}%</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+
+                    {% if report.data.metrics.most_common_actions %}
+                    <h6 class="mt-4 mb-3">Most Common User Actions</h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Action Type</th>
+                                    <th>Count</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for action in report.data.metrics.most_common_actions %}
+                                <tr>
+                                    <td>{{ action.action_type }}</td>
+                                    <td>{{ action.count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                    {% endif %}
                 </div>
             </div>
         </div>

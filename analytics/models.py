@@ -25,7 +25,7 @@ from django.db.utils import Error as DBError
 from django.http import HttpResponse
 from django.utils import timezone
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.pagesizes import letter, landscape
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
@@ -527,6 +527,7 @@ class Report(BaseModel):
         ("BENEFICIARY", "Beneficiary Impact Report"),
         ("VOLUNTEER", "Volunteer Performance Report"),
         ("EXPIRY_WASTE", "Listing Expiry & Food Waste Report"),
+        ("USER_RETENTION", "User Retention & Churn Report"),
     ]
 
     SCHEDULE_CHOICES = [
@@ -732,6 +733,7 @@ class Report(BaseModel):
                 "BENEFICIARY": self.__class__.generate_beneficiary_impact_report,
                 "VOLUNTEER": self.__class__.generate_volunteer_performance_report,
                 "EXPIRY_WASTE": self.__class__.generate_expiry_waste_report,
+                "USER_RETENTION": self.__class__.generate_user_retention_churn_report,
             }
             
             if self.report_type not in report_generators:
@@ -790,9 +792,10 @@ class Report(BaseModel):
     def export_as_pdf(self) -> HttpResponse:
         """Export report as PDF using reportlab"""
         buffer = BytesIO()
+        # Use landscape orientation for wide tables
         doc = SimpleDocTemplate(
             buffer,
-            pagesize=letter,
+            pagesize=landscape(letter),
             rightMargin=50,
             leftMargin=50,
             topMargin=50,
@@ -1243,75 +1246,36 @@ class Report(BaseModel):
                     table_data.append(row)
 
                 if table_data:
-                    # Calculate column widths for contents
-                    col_widths = [100] + [80] * (len(headers) - 1)
+                    # Dynamically fit columns to landscape page width (letter landscape ~720pt width, minus margins)
+                    max_table_width = 700  # points, adjust as needed for margins
+                    n_cols = len(headers)
+                    min_col_width = 40
+                    max_col_width = 120
+                    base_width = max_table_width // n_cols
+                    col_widths = [max(min_col_width, min(base_width, max_col_width))] * n_cols
+                    # Shrink font size if too many columns
+                    font_size = 9 if n_cols <= 10 else 7 if n_cols <= 16 else 6
                     table = Table(table_data, colWidths=col_widths, repeatRows=1)
                     table.setStyle(
                         TableStyle(
                             [
-                                (
-                                    "BACKGROUND",
-                                    (0, 0),
-                                    (-1, 0),
-                                    colors.HexColor("#3498db"),
-                                ),
+                                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#3498db")),
                                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
                                 ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                                ("FONTSIZE", (0, 0), (-1, 0), 10),
-                                ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
-                                (
-                                    "TOPPADDING",
-                                    (0, 0),
-                                    (-1, 0),
-                                    12,
-                                ),  # Add padding at the top of a header
+                                ("FONTSIZE", (0, 0), (-1, 0), font_size+1),
+                                ("BOTTOMPADDING", (0, 0), (-1, 0), 10),
+                                ("TOPPADDING", (0, 0), (-1, 0), 10),
                                 ("BACKGROUND", (0, 1), (-1, -1), colors.white),
-                                (
-                                    "TEXTCOLOR",
-                                    (0, 1),
-                                    (-1, -1),
-                                    colors.HexColor("#2c3e50"),
-                                ),
+                                ("TEXTCOLOR", (0, 1), (-1, -1), colors.HexColor("#2c3e50")),
                                 ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
-                                ("FONTSIZE", (0, 1), (-1, -1), 9),
-                                (
-                                    "GRID",
-                                    (0, 0),
-                                    (-1, -1),
-                                    1,
-                                    colors.HexColor("#bdc3c7"),
-                                ),
-                                (
-                                    "ROWBACKGROUNDS",
-                                    (0, 1),
-                                    (-1, -1),
-                                    [colors.white, colors.HexColor("#f9f9f9")],
-                                ),
-                                (
-                                    "ALIGN",
-                                    (1, 1),
-                                    (-1, -1),
-                                    "RIGHT",
-                                ),  # Right-align numeric columns
-                                (
-                                    "ALIGN",
-                                    (0, 1),
-                                    (0, -1),
-                                    "LEFT",
-                                ),  # Left-align date column
-                                (
-                                    "LEFTPADDING",
-                                    (0, 0),
-                                    (-1, -1),
-                                    8,
-                                ),  # Adjusted padding
-                                (
-                                    "RIGHTPADDING",
-                                    (0, 0),
-                                    (-1, -1),
-                                    8,
-                                ),  # Adjusted padding
+                                ("FONTSIZE", (0, 1), (-1, -1), font_size),
+                                ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#bdc3c7")),
+                                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f9f9f9")]),
+                                ("ALIGN", (1, 1), (-1, -1), "RIGHT"),
+                                ("ALIGN", (0, 1), (0, -1), "LEFT"),
+                                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
                             ]
                         )
                     )
@@ -2798,6 +2762,72 @@ class Report(BaseModel):
             summary=summary
         )
 
+    @classmethod
+    def generate_user_retention_churn_report(cls, start_date, end_date, user, title=None):
+        """Generate user retention and churn report for the specified date range"""
+        User = get_user_model()
+        # Calculate new signups vs returning users
+        new_signups = User.objects.filter(
+            date_joined__date__range=[start_date, end_date]
+        ).count()
+        # Get active users in the period (users who had any activity)
+        active_user_data = get_active_users_data(start_date, end_date)
+        returning_users = active_user_data['returning_users']
+        # Calculate retention rates
+        retention_data = calculate_retention_rates(start_date, end_date)
+        # Calculate churn rates
+        churn_data = calculate_churn_rates(start_date, end_date)
+        # Get user engagement metrics
+        engagement_metrics = calculate_user_engagement(start_date, end_date)
+        # Get user breakdown by type
+        user_type_metrics = calculate_metrics_by_user_type(start_date, end_date)
+        # Daily user activity for trend analysis
+        daily_metrics = get_daily_user_metrics(start_date, end_date)
+
+        # Only include simple values in metrics
+        metrics = {
+            "total_users": User.objects.count(),
+            "new_signups": new_signups,
+            "returning_users": returning_users,
+            "active_users": active_user_data['active_users'],
+            "inactive_users": active_user_data['inactive_users'],
+            "retention_rate_7day": float(retention_data['seven_day_retention']),
+            "retention_rate_30day": float(retention_data['thirty_day_retention']),
+            "churn_rate": float(churn_data['churn_rate']),
+            "churned_users_count": churn_data['churned_users'],
+            "avg_actions_per_user": float(engagement_metrics['avg_actions_per_user']),
+        }
+        # Add breakdowns as separate keys
+        breakdowns = {
+            "user_type_breakdown": user_type_metrics['breakdown'],
+            "retention_by_user_type": user_type_metrics['retention'],
+            "churn_by_user_type": user_type_metrics['churn'],
+            "engagement_by_user_type": user_type_metrics['engagement'],
+            "most_common_actions": engagement_metrics['most_common_actions'],
+        }
+        # Create report data structure
+        report_data = {
+            "metrics": metrics,
+            "daily_trends": daily_metrics,
+            **breakdowns
+        }
+        # Create summary text
+        summary = (
+            f"New signups: {new_signups}, Returning users: {returning_users}, "
+            f"7-day retention: {retention_data['seven_day_retention']:.1f}%, "
+            f"30-day retention: {retention_data['thirty_day_retention']:.1f}%, "
+            f"Churn rate: {churn_data['churn_rate']:.1f}%"
+        )
+        return cls.objects.create(
+            title=title or f"User Retention & Churn Report {start_date} to {end_date}",
+            report_type="USER_RETENTION",
+            date_range_start=start_date,
+            date_range_end=end_date,
+            generated_by=user,
+            data=report_data,
+            summary=summary
+        )
+
 
 def calculate_supplier_reliability(start_date, end_date):
     """Calculate supplier reliability as percentage of successful transactions"""
@@ -3412,3 +3442,193 @@ def get_daily_volunteer_performance(start_date, end_date):
     while current_date <= end_date:
         date_range.append(current_date)
         current_date += timezone.timedelta(days=1)
+
+
+def get_active_users_data(start_date, end_date):
+    """Get active and inactive users data for the specified date range using UserActivityLog"""
+    User = get_user_model()
+    # Users with any activity in the period
+    active_user_ids = set(
+        UserActivityLog.objects.filter(timestamp__date__range=[start_date, end_date])
+        .values_list('user_id', flat=True)
+    )
+    # All users registered before or during the period
+    total_users = User.objects.filter(date_joined__date__lte=end_date).count()
+    # New users in this period
+    new_users = User.objects.filter(date_joined__date__range=[start_date, end_date]).count()
+    new_user_ids = set(User.objects.filter(date_joined__date__range=[start_date, end_date]).values_list('id', flat=True))
+    returning_users = len(active_user_ids - new_user_ids)
+    # Inactive users: registered before period, no activity in period
+    existing_users_before_period = set(User.objects.filter(date_joined__date__lt=start_date).values_list('id', flat=True))
+    inactive_users = len(existing_users_before_period - active_user_ids)
+    return {
+        'active_users': len(active_user_ids),
+        'inactive_users': inactive_users,
+        'returning_users': returning_users,
+        'new_users': new_users,
+        'total_users': total_users
+    }
+
+
+def calculate_retention_rates(start_date, end_date):
+    """Calculate user retention rates for 7-day and 30-day periods using UserActivityLog"""
+    User = get_user_model()
+    total_days = (end_date - start_date).days
+    if total_days < 14:
+        return {'seven_day_retention': 0.0, 'thirty_day_retention': 0.0}
+    # 7-day retention
+    first_period_start = start_date
+    first_period_end = start_date + timedelta(days=min(7, total_days // 3))
+    second_period_start = end_date - timedelta(days=min(7, total_days // 3))
+    second_period_end = end_date
+    first_period_active = set(UserActivityLog.objects.filter(timestamp__date__range=[first_period_start, first_period_end]).values_list('user_id', flat=True))
+    second_period_active = set(UserActivityLog.objects.filter(timestamp__date__range=[second_period_start, second_period_end]).values_list('user_id', flat=True))
+    seven_day_retention = 0.0
+    if first_period_active:
+        retained = len(first_period_active & second_period_active)
+        seven_day_retention = (retained / len(first_period_active)) * 100
+    # 30-day retention
+    thirty_day_retention = 0.0
+    if total_days >= 45:
+        month_first_start = start_date
+        month_first_end = start_date + timedelta(days=15)
+        month_second_start = end_date - timedelta(days=15)
+        month_second_end = end_date
+        month_first_active = set(UserActivityLog.objects.filter(timestamp__date__range=[month_first_start, month_first_end]).values_list('user_id', flat=True))
+        month_second_active = set(UserActivityLog.objects.filter(timestamp__date__range=[month_second_start, month_second_end]).values_list('user_id', flat=True))
+        if month_first_active:
+            retained = len(month_first_active & month_second_active)
+            thirty_day_retention = (retained / len(month_first_active)) * 100
+    return {'seven_day_retention': round(seven_day_retention, 2), 'thirty_day_retention': round(thirty_day_retention, 2)}
+
+
+def calculate_churn_rates(start_date, end_date):
+    """Calculate user churn rate for the specified date range using UserActivityLog"""
+    User = get_user_model()
+    pre_period_start = start_date - timedelta(days=30)
+    pre_period_end = start_date - timedelta(days=1)
+    pre_period_active = set(UserActivityLog.objects.filter(timestamp__date__range=[pre_period_start, pre_period_end]).values_list('user_id', flat=True))
+    current_period_active = set(UserActivityLog.objects.filter(timestamp__date__range=[start_date, end_date]).values_list('user_id', flat=True))
+    churned_users = pre_period_active - current_period_active
+    churn_rate = 0.0
+    if pre_period_active:
+        churn_rate = (len(churned_users) / len(pre_period_active)) * 100
+    return {'churned_users': len(churned_users), 'churn_rate': round(churn_rate, 2), 'previous_active_users': len(pre_period_active)}
+
+
+def calculate_user_engagement(start_date, end_date):
+    """Calculate user engagement metrics for the specified date range using UserActivityLog"""
+    User = get_user_model()
+    active_user_data = get_active_users_data(start_date, end_date)
+    active_users = active_user_data['active_users']
+    total_actions = UserActivityLog.objects.filter(timestamp__date__range=[start_date, end_date]).count()
+    avg_actions_per_user = 0
+    if active_users > 0:
+        avg_actions_per_user = total_actions / active_users
+    # Most common actions
+    action_counts = UserActivityLog.objects.filter(timestamp__date__range=[start_date, end_date]).values('activity_type').annotate(count=Count('id')).order_by('-count')
+    most_common_actions = [{'action_type': a['activity_type'], 'count': a['count']} for a in action_counts]
+    return {
+        'total_actions': total_actions,
+        'avg_actions_per_user': round(avg_actions_per_user, 2),
+        'action_breakdown': {a['activity_type']: a['count'] for a in action_counts},
+        'most_common_actions': most_common_actions
+    }
+
+
+def calculate_metrics_by_user_type(start_date, end_date):
+    """Calculate user retention and churn metrics broken down by user type using UserActivityLog"""
+    User = get_user_model()
+    user_types = ["BUSINESS", "NONPROFIT", "VOLUNTEER", "CONSUMER"]
+    user_type_breakdown = []
+    retention_by_type = []
+    churn_by_type = []
+    engagement_by_type = []
+    for user_type in user_types:
+        users_of_type = User.objects.filter(user_type=user_type)
+        total_users_of_type = users_of_type.count()
+        if total_users_of_type == 0:
+            continue
+        # Active users of this type
+        active_ids = set(UserActivityLog.objects.filter(user__user_type=user_type, timestamp__date__range=[start_date, end_date]).values_list('user_id', flat=True))
+        active_count = len(active_ids)
+        inactive_count = total_users_of_type - active_count
+        new_users_count = users_of_type.filter(date_joined__date__range=[start_date, end_date]).count()
+        user_type_breakdown.append({
+            'user_type': user_type,
+            'total_users': total_users_of_type,
+            'active_users': active_count,
+            'inactive_users': inactive_count,
+            'new_users': new_users_count,
+            'active_percentage': round((active_count / total_users_of_type) * 100, 2) if total_users_of_type > 0 else 0
+        })
+        # Retention/churn
+        pre_period_start = start_date - timedelta(days=30)
+        pre_period_end = start_date - timedelta(days=1)
+        pre_active = set(UserActivityLog.objects.filter(user__user_type=user_type, timestamp__date__range=[pre_period_start, pre_period_end]).values_list('user_id', flat=True))
+        retained = pre_active & active_ids
+        retention_rate = (len(retained) / len(pre_active) * 100) if pre_active else 0.0
+        retention_by_type.append({
+            'user_type': user_type,
+            'retention_rate': round(retention_rate, 2),
+            'active_in_previous': len(pre_active),
+            'retained_users': len(retained)
+        })
+        churned = pre_active - active_ids
+        churn_rate = (len(churned) / len(pre_active) * 100) if pre_active else 0.0
+        churn_by_type.append({
+            'user_type': user_type,
+            'churn_rate': round(churn_rate, 2),
+            'churned_users': len(churned),
+            'active_in_previous': len(pre_active)
+        })
+        # Engagement
+        total_actions = UserActivityLog.objects.filter(user__user_type=user_type, timestamp__date__range=[start_date, end_date]).count()
+        login_actions = UserActivityLog.objects.filter(user__user_type=user_type, timestamp__date__range=[start_date, end_date], activity_type__icontains='login').count()
+        type_specific_actions = total_actions - login_actions
+        avg_actions = total_actions / active_count if active_count > 0 else 0.0
+        engagement_by_type.append({
+            'user_type': user_type,
+            'total_actions': total_actions,
+            'avg_actions_per_user': round(avg_actions, 2),
+            'login_actions': login_actions,
+            'type_specific_actions': type_specific_actions
+        })
+    return {
+        'breakdown': user_type_breakdown,
+        'retention': retention_by_type,
+        'churn': churn_by_type,
+        'engagement': engagement_by_type
+    }
+
+
+def get_daily_user_metrics(start_date, end_date):
+    """Get daily user metrics for trend analysis using UserActivityLog"""
+    User = get_user_model()
+    date_range = []
+    current_date = start_date
+    while current_date <= end_date:
+        date_range.append(current_date)
+        current_date += timezone.timedelta(days=1)
+    daily_metrics = []
+    for day in date_range:
+        day_active_ids = set(UserActivityLog.objects.filter(timestamp__date=day).values_list('user_id', flat=True))
+        new_users = User.objects.filter(date_joined__date=day).count()
+        business_users = User.objects.filter(user_type="BUSINESS", id__in=day_active_ids).count()
+        nonprofit_users = User.objects.filter(user_type="NONPROFIT", id__in=day_active_ids).count()
+        volunteer_users = User.objects.filter(user_type="VOLUNTEER", id__in=day_active_ids).count()
+        consumer_users = User.objects.filter(user_type="CONSUMER", id__in=day_active_ids).count()
+        user_actions = UserActivityLog.objects.filter(timestamp__date=day).count()
+        avg_actions = user_actions / len(day_active_ids) if day_active_ids else 0
+        daily_metrics.append({
+            'date': day.strftime('%Y-%m-%d'),
+            'active_users': len(day_active_ids),
+            'new_users': new_users,
+            'business_users': business_users,
+            'nonprofit_users': nonprofit_users,
+            'volunteer_users': volunteer_users,
+            'consumer_users': consumer_users,
+            'total_actions': user_actions,
+            'avg_actions_per_user': round(avg_actions, 2)
+        })
+    return daily_metrics
