@@ -108,7 +108,7 @@ ASGI_APPLICATION = "config.asgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "surplus_food_db",
+        "NAME": "surplus_food_database",
         "USER": "postgres",
         "PASSWORD": "123456",
         "HOST": "localhost",
@@ -157,6 +157,16 @@ CHANNEL_LAYERS = {
         #     "hosts": [('127.0.0.1', 6379)],
         # },
     }
+}
+
+# Celery Configuration
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BEAT_SCHEDULE = {
+    'export_and_train_expiry_model': {
+        'task': 'analytics.tasks.export_and_train_expiry_model',
+        'schedule': 3600.0,  # every hour (change as needed)
+    },
 }
 
 # Password validation

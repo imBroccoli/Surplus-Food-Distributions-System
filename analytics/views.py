@@ -36,6 +36,8 @@ from .models import (
 )
 from notifications.services import NotificationService
 
+from .ml_utils import predict_expiry_risk
+
 import csv
 import xlsxwriter
 from datetime import datetime, timedelta
@@ -2061,6 +2063,14 @@ def export_business_csv(user, metrics, active_listings):
     donation_weight = float(food_by_type["donation_weight"] or 0)
     total_food_weight = commercial_weight + donation_weight
     
+    # Calculate percentages
+    if total_food_weight > 0:
+        commercial_percentage = (commercial_weight / total_food_weight) * 100
+        donation_percentage = (donation_weight / total_food_weight) * 100
+    else:
+        commercial_percentage = 0
+        donation_percentage = 0
+        
     # Calculate environmental impact
     co2_saved = total_food_weight * 2.5  # 2.5 kg CO2 per kg food saved
     water_saved = total_food_weight * 1000  # 1000L water per kg food saved
@@ -2081,14 +2091,6 @@ def export_business_csv(user, metrics, active_listings):
     writer.writerow(["Food Distribution by Type"])
     writer.writerow(["Type", "Weight (kg)", "Percentage (%)"])
     
-    # Calculate percentages
-    if total_food_weight > 0:
-        commercial_percentage = (commercial_weight / total_food_weight) * 100
-        donation_percentage = (donation_weight / total_food_weight) * 100
-    else:
-        commercial_percentage = 0
-        donation_percentage = 0
-        
     writer.writerow(["Commercial", f"{commercial_weight:.1f}", f"{commercial_percentage:.1f}"])
     writer.writerow(["Donation", f"{donation_weight:.1f}", f"{donation_percentage:.1f}"])
     writer.writerow(["Total", f"{total_food_weight:.1f}", "100.0"])
@@ -2106,7 +2108,6 @@ def export_business_csv(user, metrics, active_listings):
         "Success Rate (%)",
     ])
 
-    # Keep the historical data from DailyAnalytics
     for metric in metrics:
         daily_success_rate = (metric["daily_fulfilled"] / metric["daily_requests"] * 100) if metric["daily_requests"] > 0 else 0.0
         writer.writerow([
@@ -2347,3 +2348,169 @@ def export_business_excel(user, metrics, active_listings):
     )
     response["Content-Disposition"] = 'attachment; filename="business_analytics.xlsx"'
     return response
+
+
+@login_required
+def predict_listing_expiry(request):
+    """API endpoint to predict the risk of a food listing expiring before being claimed."""
+    try:
+        # Get parameters from request
+        listing_id = request.GET.get("listing_id")
+        
+        if listing_id:
+            # Predict for an existing listing
+            try:
+                listing = FoodListing.objects.get(pk=listing_id)
+                
+                # Calculate time to expiry in days
+                now = timezone.now()
+                time_to_expiry = (listing.expiry_date - now).total_seconds() / 86400  # Convert to days
+                
+                # Handle cases where expiry date is in the past
+                if time_to_expiry < 0:
+                    return JsonResponse({
+                        "error": "Listing has already expired",
+                        "expiry_probability": 1.0
+                    })
+                
+                # Predict expiry risk
+                probability = predict_expiry_risk(
+                    quantity=float(listing.quantity),
+                    time_to_expiry=time_to_expiry,
+                    listing_type=listing.listing_type,
+                    has_min_quantity=listing.minimum_quantity is not None
+                )
+                
+                return JsonResponse({
+                    "listing_id": listing_id,
+                    "title": listing.title,
+                    "time_to_expiry_days": round(time_to_expiry, 1),
+                    "expiry_probability": round(probability, 3),
+                    "risk_level": get_risk_level(probability)
+                })
+                
+            except FoodListing.DoesNotExist:
+                return JsonResponse({"error": "Listing not found"}, status=404)
+        else:
+            # Predict for parameters provided directly
+            quantity = float(request.GET.get("quantity", 1))
+            time_to_expiry = float(request.GET.get("time_to_expiry", 1))
+            listing_type = request.GET.get("listing_type", "COMMERCIAL")
+            has_min_quantity = request.GET.get("has_min_quantity", "false").lower() == "true"
+            
+            probability = predict_expiry_risk(
+                quantity=quantity,
+                time_to_expiry=time_to_expiry,
+                listing_type=listing_type,
+                has_min_quantity=has_min_quantity
+            )
+            
+            return JsonResponse({
+                "expiry_probability": round(probability, 3),
+                "risk_level": get_risk_level(probability)
+            })
+            
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+def get_risk_level(probability):
+    """Convert a probability to a risk level label."""
+    if probability < 0.3:
+        return "low"
+    elif probability < 0.7:
+        return "medium"
+    else:
+        return "high"
+
+
+@login_required
+@user_passes_test(lambda u: u.user_type == "ADMIN")
+def at_risk_listings(request):
+    """View to show listings at risk of expiring."""
+    # Get active listings that haven't expired yet
+    active_listings = FoodListing.objects.filter(
+        status="ACTIVE",
+        expiry_date__gt=timezone.now()
+    ).order_by('expiry_date')[:50]  # Limit to 50 to avoid performance issues
+    
+    # Calculate risk for each listing
+    listings_with_risk = []
+    for listing in active_listings:
+        time_to_expiry = (listing.expiry_date - timezone.now()).total_seconds() / 86400
+        
+        risk = predict_expiry_risk(
+            quantity=float(listing.quantity),
+            time_to_expiry=time_to_expiry,
+            listing_type=listing.listing_type,
+            has_min_quantity=listing.minimum_quantity is not None
+        )
+        
+        listings_with_risk.append({
+            'listing': listing,
+            'risk': risk,
+            'time_to_expiry': time_to_expiry,
+            'risk_level': get_risk_level(risk)
+        })
+    
+    # Sort by risk (highest first)
+    listings_with_risk.sort(key=lambda x: x['risk'], reverse=True)
+    
+    # Only show listings with medium or high risk
+    high_risk_listings = [item for item in listings_with_risk if item['risk'] >= 0.3]
+    
+    return JsonResponse({
+        'high_risk_count': len(high_risk_listings),
+        'listings': [
+            {
+                'id': item['listing'].id,
+                'title': item['listing'].title,
+                'supplier': item['listing'].supplier.email,
+                'expiry_date': item['listing'].expiry_date.isoformat(),
+                'time_to_expiry_days': round(item['time_to_expiry'], 1),
+                'risk': round(item['risk'], 3),
+                'risk_level': item['risk_level']
+            }
+            for item in high_risk_listings[:10]  # Return top 10 highest risk
+        ]
+    })
+
+
+@login_required
+@user_passes_test(lambda u: u.user_type == "ADMIN")
+def expiry_risk_dashboard(request):
+    """View for the food listing expiry risk prediction dashboard."""
+    return render(request, "analytics/expiry_risk_dashboard.html")
+
+
+@login_required
+@require_POST
+def notify_supplier_expiry(request):
+    import json
+    data = json.loads(request.body)
+    listing_id = data.get("listing_id")
+    try:
+        listing = FoodListing.objects.select_related("supplier").get(id=listing_id)
+        NotificationService.create_notification(
+            recipient=listing.supplier,
+            notification_type="EXPIRY_WARNING",
+            title="Listing at Risk of Expiry",
+            message=f'Your listing "{listing.title}" is at risk of expiring before being claimed. Please take action to increase its visibility.',
+            priority="HIGH",
+            link=f"/listings/{listing.id}/",
+            data={
+                "sweetalert": {
+                    "icon": "warning",
+                    "title": "Expiry Risk",
+                    "toast": True,
+                    "position": "top-end",
+                    "timer": 3000,
+                    "timerProgressBar": True,
+                }
+            }
+        )
+        return JsonResponse({"status": "success"})
+    except FoodListing.DoesNotExist:
+        return JsonResponse({"status": "error", "message": "Listing not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)

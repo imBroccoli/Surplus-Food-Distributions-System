@@ -50,6 +50,19 @@
         border-radius: 10px;
         position: relative;
     }
+    .progress-bar[style*="width: 0"] {
+        min-width: 0;
+    }
+    .progress-bar[style*="width: 1%"],
+    .progress-bar[style*="width: 2%"],
+    .progress-bar[style*="width: 3%"],
+    .progress-bar[style*="width: 4%"],
+    .progress-bar[style*="width: 5%"],
+    .progress-bar[style*="width: 6%"],
+    .progress-bar[style*="width: 7%"],
+    .progress-bar[style*="width: 8%"] {
+        min-width: 12px;
+    }
     .progress-percentage {
         position: absolute;
         right: 0.5rem;
@@ -488,14 +501,20 @@
                                     <div class="performance-label">Delivery Success Rate</div>
                                     <div class="d-flex align-items-center justify-content-between mb-3">
                                         <div class="progress flex-grow-1 me-3">
-                                            <div class="progress-bar bg-warning" 
-                                                 style="width: {{ today.delivery_completion_rate }}%"
-                                                 role="progressbar"
-                                                 aria-valuenow="{{ today.delivery_completion_rate }}"
-                                                 aria-valuemin="0"
-                                                 aria-valuemax="100">
-                                                <span class="progress-percentage">{{ today.delivery_completion_rate|floatformat:1 }}%</span>
-                                            </div>
+                                            {% if today.delivery_completion_rate|floatformat:1 == "0.0" or today.delivery_count == 0 %}
+                                                <div class="progress-bar bg-light text-dark" style="width: 100%; min-width: 24px; opacity: 0.3;" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                                    <span class="progress-percentage">0%</span>
+                                                </div>
+                                            {% else %}
+                                                <div class="progress-bar bg-warning"
+                                                     style="width: {% if today.delivery_completion_rate > 0 and today.delivery_completion_rate < 2 %}2{% else %}{{ today.delivery_completion_rate|floatformat:1 }}{% endif %}%"
+                                                     role="progressbar"
+                                                     aria-valuenow="{{ today.delivery_completion_rate|floatformat:1 }}"
+                                                     aria-valuemin="0"
+                                                     aria-valuemax="100">
+                                                    <span class="progress-percentage">{{ today.delivery_completion_rate|floatformat:1 }}%</span>
+                                                </div>
+                                            {% endif %}
                                         </div>
                                     </div>
                                     <div class="performance-context">Based on {{ today.delivery_count }} deliveries</div>
@@ -506,8 +525,12 @@
                                 <div class="performance-card">
                                     <div class="performance-label">Average Response Time</div>
                                     <div class="performance-value">
-                                        {{ today.avg_response_time|default:0|floatformat:1 }}
-                                        <small>hrs</small>
+                                        {% if today.avg_response_time is None %}
+                                            <span class="text-muted">N/A</span>
+                                        {% else %}
+                                            {{ today.avg_response_time|default:0|floatformat:1 }}
+                                            <small>hrs</small>
+                                        {% endif %}
                                     </div>
                                     <div class="performance-context">From request to approval</div>
                                 </div>

@@ -23,8 +23,8 @@ class Command(BaseCommand):
         parser.add_argument(
             '--days',
             type=int,
-            default=None,
-            help='Number of days to backfill from today (default: all historical data)',
+            default=180,
+            help='Number of days to backfill from today (default: 180)',
         )
         parser.add_argument(
             '--metrics',

@@ -33,6 +33,7 @@ urlpatterns = [
     path("reports/<int:report_id>/", views.report_detail, name="report_detail"),
     path("reports/<str:report_type>/", views.report_list, name="report_list"),
     path("reports/", views.reports_dashboard, name="reports_dashboard"),
+    
     # Analytics Dashboards
     path("", views.analytics_dashboard, name="dashboard"),
     path("impact/", views.impact_dashboard, name="impact_dashboard"),
@@ -49,4 +50,12 @@ urlpatterns = [
         name="business_export",
     ),
     path("admin/", views.admin_analytics_dashboard, name="admin_analytics"),
+    
+    # Machine Learning Dashboards
+    path("expiry-risk/", views.expiry_risk_dashboard, name="expiry_risk_dashboard"),
+    
+    # Machine Learning API endpoints
+    path("ml/predict-expiry/", views.predict_listing_expiry, name="predict_expiry"),
+    path("ml/at-risk-listings/", views.at_risk_listings, name="at_risk_listings"),
+    path("ml/notify-supplier/", views.notify_supplier_expiry, name="notify_supplier_expiry"),
 ]

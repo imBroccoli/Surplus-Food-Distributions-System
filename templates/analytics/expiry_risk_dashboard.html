@@ -1,0 +1,420 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Food Expiry Risk Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Food Listing Expiry Risk Dashboard</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        This dashboard shows food listings at risk of expiring before being claimed, based on machine learning predictions.
+                        The prediction model uses factors like listing type, quantity, and time to expiry to estimate risk.
+                    </p>
+                    
+                    <div class="alert alert-info" role="alert">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>How to use this dashboard:</strong> Contact suppliers of high-risk listings to suggest promotions, 
+                        price reductions, or other strategies to increase visibility and reduce food waste.
+                    </div>
+                    
+                    <div id="at-risk-listings-container">
+                        <div class="d-flex justify-content-center py-5" id="loading-indicator">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                        <div id="risk-listings-content" class="d-none">
+                            <!-- Content loaded via JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Risk Assessment Tool</h5>
+                </div>
+                <div class="card-body">
+                    <p>Calculate expiry risk for a food listing by entering its details below:</p>
+                    
+                    <form id="risk-calculator-form" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label for="quantity" class="form-label">Quantity</label>
+                            <input type="number" class="form-control" id="quantity" name="quantity" min="0.1" step="0.1" required>
+                            <div class="invalid-feedback">Please provide a valid quantity.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="time_to_expiry" class="form-label">Time to Expiry (days)</label>
+                            <input type="number" class="form-control" id="time_to_expiry" name="time_to_expiry" min="0.1" step="0.1" required>
+                            <div class="invalid-feedback">Please provide a valid number of days.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="listing_type" class="form-label">Listing Type</label>
+                            <select class="form-select" id="listing_type" name="listing_type" required>
+                                <option value="COMMERCIAL">Commercial</option>
+                                <option value="DONATION">Donation</option>
+                                <option value="NONPROFIT_ONLY">Nonprofit Only</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="has_min_quantity" name="has_min_quantity">
+                            <label class="form-check-label" for="has_min_quantity">Has Minimum Quantity Requirement</label>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Calculate Risk</button>
+                    </form>
+                    
+                    <div id="risk-result" class="mt-4 d-none">
+                        <h5>Risk Assessment Result</h5>
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-4 text-center">
+                                        <div id="risk-gauge" class="d-inline-block position-relative" style="width: 120px; height: 120px;">
+                                            <canvas id="risk-chart" width="120" height="120"></canvas>
+                                            <div class="position-absolute top-50 start-50 translate-middle">
+                                                <h2 id="risk-percentage" class="mb-0">0%</h2>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <h4 id="risk-level-text">Risk Level: <span id="risk-level">Unknown</span></h4>
+                                        <p id="risk-description" class="mb-0">Enter listing details to calculate risk.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Risk Mitigation Strategies</h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="fw-bold">For High Risk (>70%)</h6>
+                    <ul>
+                        <li>Contact supplier immediately to recommend price reduction</li>
+                        <li>Feature prominently in "About to Expire" section</li>
+                        <li>Notify nearby nonprofits with appropriate automation</li>
+                        <li>Consider bundling with other items as a promotion</li>
+                        <li>Suggest donation option to supplier if commercial</li>
+                    </ul>
+                    
+                    <h6 class="fw-bold">For Medium Risk (30-70%)</h6>
+                    <ul>
+                        <li>Increase visibility in search results</li>
+                        <li>Include in weekly newsletter</li>
+                        <li>Send notification to suppliers about potential risk</li>
+                        <li>Consider special tagging for increased visibility</li>
+                    </ul>
+                    
+                    <h6 class="fw-bold">For Low Risk (<30%)</h6>
+                    <ul>
+                        <li>No immediate action required</li>
+                        <li>Monitor status as expiry date approaches</li>
+                    </ul>
+                    
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        <strong>Tip:</strong> The machine learning model improves with more data. Run the training command periodically to improve predictions.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    // Load at-risk listings when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        loadAtRiskListings();
+        setupRiskCalculator();
+    });
+    
+    function loadAtRiskListings() {
+        fetch('{% url "analytics:at_risk_listings" %}')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                document.getElementById('loading-indicator').classList.add('d-none');
+                document.getElementById('risk-listings-content').classList.remove('d-none');
+                
+                if (data.listings.length === 0) {
+                    document.getElementById('risk-listings-content').innerHTML = `
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Great news! There are currently no listings at high risk of expiring.
+                        </div>
+                    `;
+                    return;
+                }
+                
+                let html = `
+                    <div class="alert alert-warning mb-4">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>${data.high_risk_count} listings</strong> are at medium to high risk of expiring before being claimed.
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Listing Title</th>
+                                    <th>Supplier</th>
+                                    <th>Days to Expiry</th>
+                                    <th>Risk Level</th>
+                                    <th>Risk Score</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                data.listings.forEach(listing => {
+                    const riskClass = listing.risk_level === 'high' ? 'danger' : 
+                                    (listing.risk_level === 'medium' ? 'warning' : 'success');
+                    
+                    html += `
+                        <tr>
+                            <td>${listing.title}</td>
+                            <td>${listing.supplier}</td>
+                            <td>${listing.time_to_expiry_days}</td>
+                            <td><span class="badge bg-${riskClass}">${listing.risk_level.toUpperCase()}</span></td>
+                            <td>${(listing.risk * 100).toFixed(1)}%</td>
+                            <td>
+                                <a href="/listings/${listing.id}/" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                                <button class="btn btn-sm btn-info notify-btn" data-listing-id="${listing.id}">
+                                    <i class="fas fa-bell"></i> Notify Supplier
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                
+                document.getElementById('risk-listings-content').innerHTML = html;
+            })
+            .catch(error => {
+                document.getElementById('loading-indicator').classList.add('d-none');
+                document.getElementById('risk-listings-content').classList.remove('d-none');
+                document.getElementById('risk-listings-content').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Error loading at-risk listings: ${error.message}
+                    </div>
+                `;
+            });
+    }
+    
+    function setupRiskCalculator() {
+        const form = document.getElementById('risk-calculator-form');
+        
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            if (form.checkValidity()) {
+                const formData = new FormData(form);
+                const params = new URLSearchParams();
+                
+                params.append('quantity', formData.get('quantity'));
+                params.append('time_to_expiry', formData.get('time_to_expiry'));
+                params.append('listing_type', formData.get('listing_type'));
+                params.append('has_min_quantity', formData.get('has_min_quantity') ? 'true' : 'false');
+                
+                fetch(`{% url "analytics:predict_expiry" %}?${params.toString()}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        displayRiskResult(data);
+                    })
+                    .catch(error => {
+                        alert(`Error calculating risk: ${error.message}`);
+                    });
+            }
+            
+            form.classList.add('was-validated');
+        });
+    }
+    
+    let riskChart = null;
+    
+    function displayRiskResult(data) {
+        const resultDiv = document.getElementById('risk-result');
+        resultDiv.classList.remove('d-none');
+        
+        const riskPercentage = (data.expiry_probability * 100).toFixed(1);
+        document.getElementById('risk-percentage').textContent = `${riskPercentage}%`;
+        
+        const riskLevel = data.risk_level.toUpperCase();
+        document.getElementById('risk-level').textContent = riskLevel;
+        
+        // Set color based on risk level
+        let color = '#28a745'; // green for low
+        if (data.risk_level === 'medium') {
+            color = '#ffc107'; // yellow for medium
+        } else if (data.risk_level === 'high') {
+            color = '#dc3545'; // red for high
+        }
+        
+        document.getElementById('risk-level').style.color = color;
+        
+        // Set description based on risk level
+        let description = '';
+        if (data.risk_level === 'low') {
+            description = 'This listing has a low risk of expiring before being claimed. No immediate action needed.';
+        } else if (data.risk_level === 'medium') {
+            description = 'This listing has a moderate risk of expiring. Consider increasing its visibility.';
+        } else {
+            description = 'This listing has a high risk of expiring! Immediate action recommended.';
+        }
+        document.getElementById('risk-description').textContent = description;
+        
+        // Update or create the gauge chart
+        if (riskChart) {
+            riskChart.data.datasets[0].data = [data.expiry_probability * 100, 100 - (data.expiry_probability * 100)];
+            riskChart.data.datasets[0].backgroundColor = [color, '#e9ecef'];
+            riskChart.update();
+        } else {
+            const ctx = document.getElementById('risk-chart').getContext('2d');
+            riskChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [data.expiry_probability * 100, 100 - (data.expiry_probability * 100)],
+                        backgroundColor: [color, '#e9ecef'],
+                        borderWidth: 0,
+                        cutout: '70%'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            enabled: false
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    document.addEventListener('click', function(event) {
+        if (event.target.classList.contains('notify-btn')) {
+            const button = event.target;
+            const listingId = button.getAttribute('data-listing-id');
+            Swal.fire({
+                title: 'Notifying Supplier...',
+                text: 'Please wait while we send the notification.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            fetch("{% url 'analytics:notify_supplier_expiry' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCookie('csrftoken')
+                },
+                body: JSON.stringify({ listing_id: listingId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    Swal.fire({
+                        icon: "success",
+                        title: "Supplier Notified!",
+                        text: "The supplier has been notified about the expiry risk.",
+                        toast: true,
+                        position: "top-end",
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true
+                    });
+                } else {
+                    Swal.fire({
+                        icon: "error",
+                        title: "Error",
+                        text: data.message || "Failed to notify supplier.",
+                        toast: true,
+                        position: "top-end",
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: error.message || "Failed to notify supplier.",
+                    toast: true,
+                    position: "top-end",
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

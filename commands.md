@@ -9,4 +9,4 @@ python manage.py populate_dummy_data
 python manage.py recalculate_metrics --days 30
 
 ### Used to populate missing data from existing transactions
-python manage.py backfill_analytics
+python manage.py backfill_analytics --days 180
