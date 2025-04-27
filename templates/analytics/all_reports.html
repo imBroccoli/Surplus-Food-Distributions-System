@@ -113,12 +113,19 @@
                                 </td>
                                 <td>{{ report.title }}</td>
                                 <td>
-                                    <span class="badge {% if report.report_type == 'IMPACT' %}bg-primary
-                                        {% elif report.report_type == 'TRANSACTION' %}bg-success
-                                        {% elif report.report_type == 'USER_ACTIVITY' %}bg-info
-                                        {% elif report.report_type == 'COMPLIANCE' %}bg-warning
-                                        {% elif report.report_type == 'SUPPLIER' %}bg-indigo
-                                        {% else %}bg-danger{% endif %}">
+                                    <span class="badge 
+                                        {% if report.report_type == 'IMPACT' %}bg-primary text-white
+                                        {% elif report.report_type == 'TRANSACTION' %}bg-success text-white
+                                        {% elif report.report_type == 'USER_ACTIVITY' %}bg-info text-dark
+                                        {% elif report.report_type == 'COMPLIANCE' %}bg-warning text-dark
+                                        {% elif report.report_type == 'SYSTEM' %}bg-danger text-white
+                                        {% elif report.report_type == 'SUPPLIER' %}bg-indigo text-white
+                                        {% elif report.report_type == 'WASTE_REDUCTION' %}bg-teal text-white
+                                        {% elif report.report_type == 'BENEFICIARY' %}bg-purple text-white
+                                        {% elif report.report_type == 'VOLUNTEER' %}bg-success text-white
+                                        {% elif report.report_type == 'EXPIRY_WASTE' %}bg-danger text-white
+                                        {% elif report.report_type == 'USER_RETENTION' %}bg-indigo text-white
+                                        {% else %}bg-secondary text-dark{% endif %}">
                                         {{ report.get_report_type_display }}
                                     </span>
                                 </td>

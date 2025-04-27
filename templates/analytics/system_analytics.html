@@ -386,7 +386,7 @@
                             </div>
                             <div class="progress">
                                 <div class="progress-bar bg-primary" 
-                                     style="width: {% widthratio today.business_users_active today.active_users 100 %}%"
+                                     style="width: '{% widthratio today.business_users_active today.active_users 100 %}%'"
                                      role="progressbar"
                                      aria-valuenow="{% widthratio today.business_users_active today.active_users 100 %}"
                                      aria-valuemin="0"
@@ -408,7 +408,7 @@
                             </div>
                             <div class="progress">
                                 <div class="progress-bar bg-success" 
-                                     style="width: {% widthratio today.nonprofit_users_active today.active_users 100 %}%"
+                                     style="width: '{% widthratio today.nonprofit_users_active today.active_users 100 %}%'"
                                      role="progressbar"
                                      aria-valuenow="{% widthratio today.nonprofit_users_active today.active_users 100 %}"
                                      aria-valuemin="0"
@@ -430,7 +430,7 @@
                             </div>
                             <div class="progress">
                                 <div class="progress-bar bg-warning" 
-                                     style="width: {% widthratio today.volunteer_users_active today.active_users 100 %}%"
+                                     style="width: '{% widthratio today.volunteer_users_active today.active_users 100 %}%'"
                                      role="progressbar"
                                      aria-valuenow="{% widthratio today.volunteer_users_active today.active_users 100 %}"
                                      aria-valuemin="0"
@@ -452,7 +452,7 @@
                             </div>
                             <div class="progress">
                                 <div class="progress-bar bg-info" 
-                                     style="width: {% widthratio today.consumer_users_active today.active_users 100 %}%"
+                                     style="width: '{% widthratio today.consumer_users_active today.active_users 100 %}%'"
                                      role="progressbar"
                                      aria-valuenow="{% widthratio today.consumer_users_active today.active_users 100 %}"
                                      aria-valuemin="0"
@@ -483,7 +483,7 @@
                                     <div class="d-flex align-items-center justify-content-between mb-3">
                                         <div class="progress flex-grow-1 me-3">
                                             <div class="progress-bar bg-success" 
-                                                 style="width: {{ today.request_approval_rate }}%"
+                                                 style="width: '{{ today.request_approval_rate }}%'"
                                                  role="progressbar"
                                                  aria-valuenow="{{ today.request_approval_rate }}"
                                                  aria-valuemin="0"
@@ -507,7 +507,7 @@
                                                 </div>
                                             {% else %}
                                                 <div class="progress-bar bg-warning"
-                                                     style="width: {% if today.delivery_completion_rate > 0 and today.delivery_completion_rate < 2 %}2{% else %}{{ today.delivery_completion_rate|floatformat:1 }}{% endif %}%"
+                                                     style="width: '{% if today.delivery_completion_rate > 0 and today.delivery_completion_rate < 2 %}2{% else %}{{ today.delivery_completion_rate|floatformat:1 }}{% endif %}%'"
                                                      role="progressbar"
                                                      aria-valuenow="{{ today.delivery_completion_rate|floatformat:1 }}"
                                                      aria-valuemin="0"

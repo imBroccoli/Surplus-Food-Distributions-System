@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import csv
 from io import BytesIO, StringIO
 import logging
+from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test

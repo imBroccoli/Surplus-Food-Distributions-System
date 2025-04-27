@@ -4,63 +4,7 @@
 {% block title %}Analytics Reports - Surplus Food Distribution{% endblock %}
 
 {% block extra_head %}
-<!-- Custom styles for Indigo color class -->
-<style>
-.bg-indigo {
-    background-color: #6610f2 !important;
-}
-.text-indigo {
-    color: #6610f2 !important;
-}
-.btn-outline-indigo {
-    color: #6610f2;
-    border-color: #6610f2;
-}
-.btn-outline-indigo:hover {
-    color: #fff;
-    background-color: #6610f2;
-    border-color: #6610f2;
-}
-.bg-indigo.bg-opacity-10 {
-    background-color: rgba(102, 16, 242, 0.1) !important;
-}
-.bg-teal {
-    background-color: #20c997 !important;
-}
-.text-teal {
-    color: #20c997 !important;
-}
-.btn-outline-teal {
-    color: #20c997;
-    border-color: #20c997;
-}
-.btn-outline-teal:hover {
-    color: #fff;
-    background-color: #20c997;
-    border-color: #20c997;
-}
-.bg-teal.bg-opacity-10 {
-    background-color: rgba(32, 201, 151, 0.1) !important;
-}
-.bg-purple {
-    background-color: #8e44ad !important;
-}
-.text-purple {
-    color: #8e44ad !important;
-}
-.btn-outline-purple {
-    color: #8e44ad;
-    border-color: #8e44ad;
-}
-.btn-outline-purple:hover {
-    color: #fff;
-    background-color: #8e44ad;
-    border-color: #8e44ad;
-}
-.bg-purple.bg-opacity-10 {
-    background-color: rgba(142, 68, 173, 0.1) !important;
-}
-</style>
+{# Custom color utility classes moved to static/css/custom.css #}
 {% endblock %}
 
 {% block content %}
@@ -367,14 +311,19 @@
                         <tr>
                             <td>{{ report.title }}</td>
                             <td>
-                                <span class="badge {% if report.report_type == 'IMPACT' %}bg-primary
+                                <span class="badge 
+                                    {% if report.report_type == 'IMPACT' %}bg-primary
                                     {% elif report.report_type == 'TRANSACTION' %}bg-success
                                     {% elif report.report_type == 'USER_ACTIVITY' %}bg-info
                                     {% elif report.report_type == 'COMPLIANCE' %}bg-warning
                                     {% elif report.report_type == 'SUPPLIER' %}bg-indigo
                                     {% elif report.report_type == 'WASTE_REDUCTION' %}bg-teal
                                     {% elif report.report_type == 'BENEFICIARY' %}bg-purple text-dark
-                                    {% else %}bg-danger{% endif %}">
+                                    {% elif report.report_type == 'SYSTEM' %}bg-danger
+                                    {% elif report.report_type == 'EXPIRY_WASTE' %}bg-danger
+                                    {% elif report.report_type == 'VOLUNTEER' %}bg-success
+                                    {% elif report.report_type == 'USER_RETENTION' %}bg-indigo
+                                    {% else %}bg-secondary{% endif %}">
                                     {{ report.get_report_type_display }}
                                 </span>
                             </td>
@@ -392,14 +341,14 @@
                                             class="btn btn-sm btn-outline-success me-1"
                                             data-bs-toggle="tooltip"
                                             title="Regenerate Report"
-                                            onclick="regenerateReport({{ report.id }})">
+                                            onclick="regenerateReport('{{ report.id }}')">
                                         <i class="fas fa-sync-alt"></i>
                                     </button>
                                     <button type="button"
                                             class="btn btn-sm btn-outline-info me-1"
                                             data-bs-toggle="tooltip"
                                             title="Schedule Report"
-                                            onclick="scheduleReport({{ report.id }})">
+                                            onclick="scheduleReport('{{ report.id }}')">
                                         <i class="fas fa-clock"></i>
                                     </button>
                                 </div>
@@ -490,14 +439,19 @@
                         <tr>
                             <td>{{ report.title }}</td>
                             <td>
-                                <span class="badge {% if report.report_type == 'IMPACT' %}bg-primary
-                                    {% elif report.report_type == 'TRANSACTION' %}bg-success
-                                    {% elif report.report_type == 'USER_ACTIVITY' %}bg-info
-                                    {% elif report.report_type == 'COMPLIANCE' %}bg-warning
-                                    {% elif report.report_type == 'SUPPLIER' %}bg-indigo
-                                    {% elif report.report_type == 'WASTE_REDUCTION' %}bg-teal
-                                    {% elif report.report_type == 'BENEFICIARY' %}bg-purple
-                                    {% else %}bg-danger{% endif %}">
+                                <span class="badge 
+                                    {% if report.report_type == 'IMPACT' %}bg-primary text-white
+                                    {% elif report.report_type == 'TRANSACTION' %}bg-success text-white
+                                    {% elif report.report_type == 'USER_ACTIVITY' %}bg-info text-dark
+                                    {% elif report.report_type == 'COMPLIANCE' %}bg-warning text-dark
+                                    {% elif report.report_type == 'SUPPLIER' %}bg-indigo text-white
+                                    {% elif report.report_type == 'WASTE_REDUCTION' %}bg-teal text-white
+                                    {% elif report.report_type == 'BENEFICIARY' %}bg-purple text-white
+                                    {% elif report.report_type == 'SYSTEM' %}bg-danger text-white
+                                    {% elif report.report_type == 'EXPIRY_WASTE' %}bg-danger text-white
+                                    {% elif report.report_type == 'VOLUNTEER' %}bg-success text-white
+                                    {% elif report.report_type == 'USER_RETENTION' %}bg-indigo text-white
+                                    {% else %}bg-secondary text-dark{% endif %}">
                                     {{ report.get_report_type_display }}
                                 </span>
                             </td>
@@ -576,8 +530,12 @@ function getCookie(name) {
 }
 
 // Track loading state and current page globally
-let isLoading = false;
-let currentPage = {{ recent_reports.number }};
+if (typeof isLoading === 'undefined') {
+    var isLoading = false;
+}
+if (typeof currentPage === 'undefined') {
+    var currentPage = Number('{{ recent_reports.number|default:1 }}') || 1;
+}
 
 // Function to update pagination UI
 function updatePaginationUI(data) {
