@@ -3,6 +3,6 @@ from celery import Celery
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
-app = Celery('FYP_Main')
+app = Celery(os.path.basename(os.getcwd()))
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
