@@ -257,7 +257,24 @@ def system_analytics(request):
             ),
         }
 
-    # Return context data for the template
+    # DEBUG OUTPUT: Log all context values for today
+    logger.warning("System Analytics Context for Today (%s):", today)
+    logger.warning("active_users: %s", todays_metrics.active_users)
+    logger.warning("new_users: %s", todays_metrics.new_users)
+    logger.warning("business_users_active: %s", todays_metrics.business_users_active)
+    logger.warning("nonprofit_users_active: %s", todays_metrics.nonprofit_users_active)
+    logger.warning("volunteer_users_active: %s", todays_metrics.volunteer_users_active)
+    logger.warning("consumer_users_active: %s", todays_metrics.consumer_users_active)
+    logger.warning("new_listings_count: %s", todays_metrics.new_listings_count)
+    logger.warning("request_count: %s", todays_metrics.request_count)
+    logger.warning("delivery_count: %s", todays_metrics.delivery_count)
+    logger.warning("avg_response_time: %s", todays_metrics.avg_response_time)
+    logger.warning("avg_transaction_value: %s", todays_metrics.avg_transaction_value)
+    logger.warning("request_approval_rate: %s", todays_metrics.request_approval_rate)
+    logger.warning("transaction_completion_rate: %s", todays_metrics.transaction_completion_rate)
+    logger.warning("delivery_completion_rate: %s", todays_metrics.delivery_completion_rate)
+    logger.warning("avg_rating: %s", todays_metrics.avg_rating)
+
     context = {
         "today": todays_metrics,
         "daily_metrics": daily_metrics,

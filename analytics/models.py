@@ -225,8 +225,8 @@ class SystemMetrics(BaseModel):
     delivery_count = models.IntegerField(
         default=0, help_text="Number of deliveries created"
     )
-    avg_response_time = models.DurationField(
-        null=True, blank=True, help_text="Average time to respond to requests"
+    avg_response_time = models.FloatField(
+        null=True, blank=True, help_text="Average time to respond to requests (hours)"
     )
     avg_transaction_value = models.DecimalField(
         max_digits=10,
@@ -369,7 +369,7 @@ class SystemMetrics(BaseModel):
             created_at__date=date
         ).count()
 
-        # Calculate average response time (in hours)
+        # Calculate average response time (in hours, float)
         response_times = (
             FoodRequest.objects.filter(
                 status__in=["APPROVED", "REJECTED"], updated_at__date=date
@@ -382,6 +382,11 @@ class SystemMetrics(BaseModel):
             )
             .aggregate(avg_time=Avg("response_time"), count=Count("id"))
         )
+        avg_response_time = None
+        if response_times["count"] > 0 and response_times["avg_time"]:
+            # Convert timedelta to hours as float
+            total_seconds = response_times["avg_time"].total_seconds()
+            avg_response_time = round(total_seconds / 3600, 2)
 
         # Calculate average transaction value including both commercial and donation listings
         transaction_values = (
@@ -477,9 +482,7 @@ class SystemMetrics(BaseModel):
                 "new_listings_count": new_listings,
                 "request_count": requests_created,
                 "delivery_count": deliveries_created,
-                "avg_response_time": response_times["avg_time"]
-                if response_times["count"] > 0
-                else None,
+                "avg_response_time": avg_response_time,
                 "avg_transaction_value": transaction_values["avg_value"]
                 or Decimal("0.00"),
                 "request_approval_rate": request_approval_rate,
@@ -2114,20 +2117,9 @@ class Report(BaseModel):
             total_new_users=Sum("new_users"),
         )
 
-        # Handle timedelta conversion for avg_response_time
-        avg_response_time = metrics["avg_response_time"]
-        if avg_response_time:
-            # Convert timedelta to seconds
-            metrics["avg_response_time"] = avg_response_time.total_seconds()
-        else:
-            metrics["avg_response_time"] = 0
-
         # Ensure absence of None values in other metrics
         for key in metrics:
-            if (
-                key != "avg_response_time"
-            ):  # Skip avg_response_time as it's already handled
-                metrics[key] = float(metrics[key] if metrics[key] is not None else 0)
+            metrics[key] = float(metrics[key] if metrics[key] is not None else 0)
 
         # Collect the daily metrics for trending
         daily_metrics = list(
@@ -2144,17 +2136,10 @@ class Report(BaseModel):
         # Initialize empty metrics after database entries
         formatted_daily_metrics = []
         for metric in daily_metrics:
-            # Convert timedelta to seconds for response_time
-            response_time = metric["response_time"]
-            if response_time and isinstance(response_time, timedelta):
-                response_time = response_time.total_seconds()
-            else:
-                response_time = 0
-
             formatted_metric = {
                 "date": metric["date"].strftime("%Y-%m-%d"),
                 "active_users": int(metric["active_users"] or 0),
-                "response_time": float(response_time),
+                "response_time": float(metric["response_time"] or 0),
                 "completion_rate": float(metric["completion_rate"] or 0),
             }
             formatted_daily_metrics.append(formatted_metric)
@@ -2202,7 +2187,7 @@ class Report(BaseModel):
             date_range_end=end_date,
             generated_by=user,
             data=report_data,
-            summary=f"Avg completion rate: {metrics['avg_transaction_completion']:.1f}%, Response time: {metrics['avg_response_time']:.2f}s, Active users: {metrics['total_active_users']}",
+            summary=f"Avg completion rate: {metrics['avg_transaction_completion']:.1f}%, Response time: {metrics['avg_response_time']:.2f} hours, Active users: {metrics['total_active_users']}",
         )
 
     @classmethod

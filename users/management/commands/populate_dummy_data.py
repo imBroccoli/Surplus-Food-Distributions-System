@@ -240,6 +240,103 @@ class Command(BaseCommand):
                 listing.created_at = created_at
                 listing.save(update_fields=["created_at"])
 
+        # Ensure at least two listings for today for analytics
+        today = timezone.now().date()
+        business_users = list(business_users)
+        for i in range(2):
+            business = random.choice(business_users)
+            expiry_date = timezone.now() + timedelta(days=random.randint(7, 30))
+            if timezone.is_naive(expiry_date):
+                expiry_date = timezone.make_aware(expiry_date)
+            listing = FoodListing.objects.create(
+                supplier=business,
+                title=f"Today's Listing {i+1}",
+                description="Guaranteed listing for today's analytics.",
+                quantity=Decimal(str(random.randint(10, 100))),
+                unit=random.choice(units),
+                expiry_date=expiry_date,
+                storage_requirements=random.choice(storage_requirements),
+                handling_instructions=random.choice(handling_instructions),
+                listing_type="COMMERCIAL",
+                minimum_quantity=Decimal(str(random.randint(1, 5))),
+                requires_verification=False,
+                status="ACTIVE",
+                price=Decimal(str(random.randint(10, 50))),
+                address=f"{random.randint(1, 100)} Main St",
+                city=random.choice(irish_cities),
+                postal_code=f"D{random.randint(1, 24)}",
+                latitude=Decimal(str(random.uniform(51.4, 55.3))),
+                longitude=Decimal(str(random.uniform(-10.5, -6.2))),
+            )
+            # Set created_at to today at midnight
+            listing.created_at = timezone.make_aware(datetime.datetime.combine(today, datetime.time.min))
+            listing.save(update_fields=["created_at"])
+
+            # --- Guarantee at least one approved request, transaction, and delivery for today ---
+            from users.models import CustomUser
+            from transactions.models import FoodRequest, Transaction, DeliveryAssignment
+
+            requester = random.choice(
+                list(CustomUser.objects.filter(user_type__in=["CONSUMER", "NONPROFIT"]))
+            )
+            # Set times for today
+            created_at = timezone.make_aware(datetime.datetime.combine(today, datetime.time(hour=9)))
+            updated_at = created_at + timedelta(hours=2)
+            pickup_date = updated_at + timedelta(hours=1)
+
+            # Create approved request (for response time and approval rate)
+            request = FoodRequest.objects.create(
+                listing=listing,
+                requester=requester,
+                quantity_requested=Decimal("5"),
+                pickup_date=pickup_date,
+                status="APPROVED",
+                created_at=created_at,
+                updated_at=updated_at,
+            )
+
+            # Create a rejected request for approval rate diversity
+            rejected_request = FoodRequest.objects.create(
+                listing=listing,
+                requester=requester,
+                quantity_requested=Decimal("3"),
+                pickup_date=pickup_date,
+                status="REJECTED",
+                created_at=created_at + timedelta(hours=1),
+                updated_at=updated_at + timedelta(hours=1),
+            )
+
+            # Create completed transaction for the approved request
+            completion_date = updated_at + timedelta(hours=2)
+            transaction = Transaction.objects.create(
+                request=request,
+                status="COMPLETED",
+                completion_date=completion_date,
+                transaction_date=completion_date,
+                notes="Guaranteed analytics transaction for today"
+            )
+
+            # Create delivery assignment with status DELIVERED for today
+            pickup_start = completion_date - timedelta(hours=2)
+            pickup_end = pickup_start + timedelta(minutes=30)
+            delivery_start = pickup_end + timedelta(minutes=15)
+            delivery_end = delivery_start + timedelta(hours=1)
+            delivery = DeliveryAssignment.objects.create(
+                transaction=transaction,
+                volunteer=random.choice(list(CustomUser.objects.filter(user_type="VOLUNTEER"))),
+                status="DELIVERED",
+                pickup_window_start=pickup_start,
+                pickup_window_end=pickup_end,
+                delivery_window_start=delivery_start,
+                delivery_window_end=delivery_end,
+                estimated_weight=request.quantity_requested,
+                assigned_at=pickup_start,
+                picked_up_at=pickup_start + timedelta(minutes=15),
+                delivered_at=timezone.make_aware(datetime.datetime.combine(today, datetime.time(hour=15))),
+            )
+            delivery.created_at = pickup_start
+            delivery.save(update_fields=["created_at"])
+
     def create_transactions(self):
         # Use both active and expired listings
         active_listings = FoodListing.objects.filter(status="ACTIVE")
@@ -261,13 +358,22 @@ class Command(BaseCommand):
                     )[0]
 
                     # Simulate realistic request creation and approval times
-                    created_at = self.random_date_in_last_n_days(n=180)
-                    # Ensure at least 80% of requests have a non-zero approval delay (2-24 hours)
-                    if random.random() < 0.8:
-                        approval_delay_hours = random.randint(2, 24)
+                    # --- FIX: If updated_at is today, created_at must also be today and only a few hours earlier ---
+                    today = timezone.now().date()
+                    if random.random() < 0.1:  # 10% of requests are for today
+                        created_at = timezone.make_aware(datetime.datetime.combine(today, datetime.time(hour=random.randint(8, 16))))
+                        approval_delay_hours = random.randint(1, 3)
+                        approved_at = created_at + timedelta(hours=approval_delay_hours)
                     else:
-                        approval_delay_hours = 0
-                    approved_at = created_at + timedelta(hours=approval_delay_hours)
+                        created_at = self.random_date_in_last_n_days(n=180)
+                        # Ensure updated_at is not today unless created_at is today
+                        approval_delay_hours = random.randint(2, 24)
+                        approved_at = created_at + timedelta(hours=approval_delay_hours)
+                        if approved_at.date() == today and created_at.date() != today:
+                            # Force approval to be on the same day as creation
+                            approved_at = created_at + timedelta(hours=approval_delay_hours)
+                            if approved_at.date() != created_at.date():
+                                approved_at = created_at + timedelta(hours=1)
 
                     completion_date = None
                     transaction_date = created_at
