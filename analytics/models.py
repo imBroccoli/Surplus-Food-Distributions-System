@@ -370,7 +370,7 @@ class SystemMetrics(BaseModel):
         ).count()
 
         # Calculate average response time (in hours, float)
-        response_times = (
+        response_times_qs = (
             FoodRequest.objects.filter(
                 status__in=["APPROVED", "REJECTED"], updated_at__date=date
             )
@@ -380,8 +380,9 @@ class SystemMetrics(BaseModel):
                     output_field=models.DurationField(),
                 )
             )
-            .aggregate(avg_time=Avg("response_time"), count=Count("id"))
+            .filter(response_time__lte=timedelta(hours=48))  # Ignore outliers > 48 hours
         )
+        response_times = response_times_qs.aggregate(avg_time=Avg("response_time"), count=Count("id"))
         avg_response_time = None
         if response_times["count"] > 0 and response_times["avg_time"]:
             # Convert timedelta to hours as float
@@ -1114,6 +1115,7 @@ class Report(BaseModel):
                                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                                 ("FONTSIZE", (0, 0), (-1, 0), 10),
                                 ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+                                ("TOPPADDING", (0, 0), (-1, 0), 8),
                                 ("BACKGROUND", (0, 1), (-1, -1), colors.white),
                                 ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#bdc3c7")),
                                 ("ALIGN", (1, 1), (1, -1), "RIGHT"),  # Right align count
@@ -1140,6 +1142,7 @@ class Report(BaseModel):
                                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                                 ("FONTSIZE", (0, 0), (-1, 0), 10),
                                 ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+                                ("TOPPADDING", (0, 0), (-1, 0), 8),
                                 ("BACKGROUND", (0, 1), (-1, -1), colors.white),
                                 ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#bdc3c7")),
                                 ("ALIGN", (1, 1), (1, -1), "RIGHT"),  # Right align count

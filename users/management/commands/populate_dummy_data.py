@@ -358,7 +358,6 @@ class Command(BaseCommand):
                     )[0]
 
                     # Simulate realistic request creation and approval times
-                    # --- FIX: If updated_at is today, created_at must also be today and only a few hours earlier ---
                     today = timezone.now().date()
                     if random.random() < 0.1:  # 10% of requests are for today
                         created_at = timezone.make_aware(datetime.datetime.combine(today, datetime.time(hour=random.randint(8, 16))))
@@ -366,14 +365,13 @@ class Command(BaseCommand):
                         approved_at = created_at + timedelta(hours=approval_delay_hours)
                     else:
                         created_at = self.random_date_in_last_n_days(n=180)
-                        # Ensure updated_at is not today unless created_at is today
                         approval_delay_hours = random.randint(2, 24)
                         approved_at = created_at + timedelta(hours=approval_delay_hours)
+                        # --- FIX: If updated_at is today, created_at must also be today and only a few hours earlier ---
                         if approved_at.date() == today and created_at.date() != today:
-                            # Force approval to be on the same day as creation
+                            created_at = timezone.make_aware(datetime.datetime.combine(today, datetime.time(hour=random.randint(8, 16))))
+                            approval_delay_hours = random.randint(1, 3)
                             approved_at = created_at + timedelta(hours=approval_delay_hours)
-                            if approved_at.date() != created_at.date():
-                                approved_at = created_at + timedelta(hours=1)
 
                     completion_date = None
                     transaction_date = created_at
