@@ -22,7 +22,7 @@
                     <div class="row">
                         <div class="col-md-6">
                             <p><strong>Title:</strong> {{ listing.title }}</p>
-                            <p><strong>Quantity Available:</strong> {{ listing.quantity }} {{ listing.unit }}</p>
+                            <p><strong>Quantity Available:</strong> {{ listing.remaining_quantity }} {{ listing.unit }}</p>
                             <p><strong>Type:</strong> {{ listing.get_listing_type_display }}</p>
                             {% if listing.price %}
                                 <p><strong>Price:</strong> ${{ listing.price }}</p>

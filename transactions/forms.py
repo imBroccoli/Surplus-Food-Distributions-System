@@ -117,6 +117,15 @@ class FoodRequestForm(forms.ModelForm):
                     "Beneficiary count is required for nonprofit requests"
                 )
 
+        # Enforce pickup date is not after expiry date for consumer and nonprofit users
+        if self.user.user_type in ["CONSUMER", "NONPROFIT"]:
+            pickup_date = cleaned_data.get("pickup_date")
+            expiry_date = self.listing.expiry_date
+            if pickup_date and expiry_date and pickup_date > expiry_date:
+                raise forms.ValidationError(
+                    f"Pickup date ({pickup_date:%Y-%m-%d %H:%M}) cannot be after the food expiry date ({expiry_date:%Y-%m-%d %H:%M})."
+                )
+
         return cleaned_data
 
     def save(self, commit=True):
