@@ -544,25 +544,6 @@
                 </div>
             </div>
 
-            <!-- DEBUG: Raw context values for progress bars and ratios -->
-            <div class="alert alert-info mt-4">
-                <strong>Debug Output:</strong><br>
-                active_users: {{ today.active_users }}<br>
-                business_users_active: {{ today.business_users_active }}<br>
-                nonprofit_users_active: {{ today.nonprofit_users_active }}<br>
-                volunteer_users_active: {{ today.volunteer_users_active }}<br>
-                consumer_users_active: {{ today.consumer_users_active }}<br>
-                <br>
-                widthratio business: {% widthratio today.business_users_active today.active_users 100 %}%<br>
-                widthratio nonprofit: {% widthratio today.nonprofit_users_active today.active_users 100 %}%<br>
-                widthratio volunteer: {% widthratio today.volunteer_users_active today.active_users 100 %}%<br>
-                widthratio consumer: {% widthratio today.consumer_users_active today.active_users 100 %}%<br>
-                <br>
-                request_approval_rate: {{ today.request_approval_rate }}<br>
-                delivery_completion_rate: {{ today.delivery_completion_rate }}<br>
-                avg_response_time: {{ today.avg_response_time }}<br>
-            </div>
-
             <!-- Activity Breakdown -->
             <div class="col-12">
                 <div class="stats-card">
