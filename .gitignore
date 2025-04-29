@@ -37,6 +37,7 @@ media
 # Virtual Environment
 venv/
 ENV/
+.venv/
 
 # Misc
 .DS_Store
