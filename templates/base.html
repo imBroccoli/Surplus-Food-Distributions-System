@@ -431,5 +431,14 @@
     });
     </script>
     {% endif %}
+    <script>
+    window.addEventListener('pageshow', function(event) {
+        if (window.sweetify && typeof window.sweetify.close === 'function') {
+            window.sweetify.close();
+        } else if (window.Swal && typeof window.Swal.close === 'function') {
+            window.Swal.close();
+        }
+    });
+    </script>
 </body>
 </html>

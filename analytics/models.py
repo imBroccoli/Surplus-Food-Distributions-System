@@ -464,7 +464,7 @@ class SystemMetrics(BaseModel):
         avg_rating = Decimal("0.00")
         if completed_transactions_today.exists():
             ratings = Rating.objects.filter(
-                transaction__in=completed_transactions_today
+                transaction__completion_date__date__range=[date, date]
             ).aggregate(avg=Avg("rating"))
             avg_rating = (
                 Decimal(str(ratings["avg"])) if ratings["avg"] else Decimal("0.00")
@@ -2936,7 +2936,6 @@ def get_food_categories_by_supplier(start_date, end_date):
 def calculate_avg_quality_rating_by_supplier(start_date, end_date):
     """Calculate average quality rating for suppliers"""
     return Rating.objects.filter(
-        transaction__request__listing__supplier__user_type="BUSINESS",
         transaction__completion_date__date__range=[start_date, end_date]
     ).aggregate(avg_rating=Avg('rating'))['avg_rating'] or 0.0
 
@@ -3233,8 +3232,7 @@ def get_satisfaction_metrics(start_date, end_date):
     """Get beneficiary satisfaction metrics from ratings"""
     # Get ratings given by beneficiaries
     ratings = Rating.objects.filter(
-        transaction__completion_date__date__range=[start_date, end_date],
-        transaction__request__requester__user_type__in=["NONPROFIT", "CONSUMER"]
+        transaction__completion_date__date__range=[start_date, end_date]
     )
     
     # Calculate metrics
