@@ -82,6 +82,12 @@ class FoodListingForm(forms.ModelForm):
                 raise ValidationError("Expiry date cannot be in the past")
         return expiry_date
 
+    def clean_quantity(self):
+        quantity = self.cleaned_data.get("quantity")
+        if quantity is not None and quantity <= 0:
+            raise ValidationError("Quantity must be a positive number.")
+        return quantity
+
     def clean(self):
         cleaned_data = super().clean()
         listing_type = cleaned_data.get("listing_type")
